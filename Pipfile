@@ -1,0 +1,26 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+aicsimageio = "==3.3.4"
+pandas = "==1.2.4"
+matplotlib = "==3.4.3"
+scikit-image = "==0.18.1"
+scikit-learn = "==0.24.2"
+opencv-python = "==4.5.1.48"
+opencv-python-headless = "==4.5.2.54"
+stardist = "==0.6.2"
+tensorflow = "==2.6"
+cellpose = "==0.6.5"
+keras-nightly = "==2.5.0.dev2021032900"
+keras = "==2.6.0"
+mxnet = "==1.6.0"
+numpy = "==1.19.2"
+deepcell-tracking = {path = "./DeepCell"}
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"

@@ -88,7 +88,10 @@ def load_tiff(img,is_mibi=True):
         ImageDASK=img.get_image_dask_data(string,S=0,T=0,C=0)
     
     ImageTrue = ImageDASK.compute()
-    
+
+    # temporaly
+    is_mibi = False
+    # temporaly
     if is_mibi==True:
         Channel_list = []
         with TiffFile(file) as tif:
