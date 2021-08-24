@@ -2,27 +2,24 @@
 #  SPEX SEGMENTATION MODULE - Functions for single-cell segmentation in FOV Images #
 ####################################################################################
 
-import os
 import numpy as np
 import pandas as pd
-import matplotlib as plt
 import math
 import json
 
-from aicsimageio import AICSImage, imread_dask
-from aicsimageio.vendor.omexml import OMEXML
+from aicsimageio import AICSImage
 from tifffile import TiffFile
 
-from sklearn.neighbors import NearestNeighbors
-from skimage.filters import median, gaussian,threshold_otsu
+import skimage
+from skimage.filters import median, gaussian
 from skimage.filters import threshold_otsu
 from skimage.exposure import rescale_intensity
 from skimage.measure import label, regionprops_table, regionprops
 from skimage.feature import peak_local_max
-from skimage.morphology import watershed, dilation, opening, erosion, disk,binary_dilation
+from skimage.morphology import watershed, dilation, erosion, disk, binary_dilation
 from skimage.segmentation import watershed, expand_labels
 from skimage.restoration import denoise_nl_means, estimate_sigma
-from skimage.util import img_as_float, apply_parallel
+from skimage.util import apply_parallel
 
 import cv2
 
@@ -302,9 +299,10 @@ def cellpose_cellseg(img, seg_channels,diamtr, scaling):
     
     labels_final = cv2.resize(labels2, (labels2.shape[1]//scaling,labels2.shape[0]//scaling), interpolation=cv2.INTER_NEAREST)
     
-    labels_final=np.uint32(labels_final)
+    labels_final = np.uint32(labels_final)
     
     return labels_final
+
 
 def deepcell_segmentation(img, seg_channels, mpp):
 
@@ -321,14 +319,14 @@ def deepcell_segmentation(img, seg_channels, mpp):
     labels_final : per cell segmentation as numpy array
 
     """
-    temp2=np.zeros((img.shape[1],img.shape[2]))
+    temp2 = np.zeros((img.shape[1], img.shape[2]))
     for i in seg_channels:
-        temp=img[i]
-        temp2=temp+temp2
+        temp = img[i]
+        temp2 = temp+temp2
 
     x=temp2
     y = np.expand_dims(x, axis=0)
-    pseudoIF=np.stack((y,y), axis=3)
+    pseudoIF = np.stack((y, y), axis=3)
 
     app = Mesmer()
     y_pred = app.predict(pseudoIF, image_mpp=mpp, compartment='nuclear')
@@ -353,7 +351,7 @@ def classicwatershed_cellseg(img, seg_channels):
     dilated_labels : per cell segmentation as numpy array
     """
     
-    temp2=np.zeros((img.shape[1],img.shape[2]))
+    temp2= np.zeros((img.shape[1], img.shape[2]))
     for i in seg_channels:
         temp=img[i]
         temp2=temp+temp2
@@ -382,7 +380,7 @@ def classicwatershed_cellseg(img, seg_channels):
     return dilated_labels
 
 
-def rescue_cells(img,seg_channels, labeling):
+def rescue_cells(img, seg_channels, labeling):
     """Rescue/Segment cells that deep learning approach may have missed
     
     Parameters
@@ -404,33 +402,33 @@ def rescue_cells(img,seg_channels, labeling):
     SegImage=temp2/len(seg_channels)
     
     props = regionprops_table(labeling, intensity_image=SegImage, 
-                              properties=['mean_intensity','area'])
+                              properties=['mean_intensity', 'area'])
 
-    meanint_cell= np.mean(props['mean_intensity'])
-    meansize_cell=np.mean(props['area'])
+    meanint_cell = np.mean(props['mean_intensity'])
+    meansize_cell = np.mean(props['area'])
 
-    radius= math.floor(math.sqrt(meansize_cell/3.14)*0.5)
-    threshold= meanint_cell*0.5
+    radius = math.floor(math.sqrt(meansize_cell/3.14)*0.5)
+    threshold = meanint_cell*0.5
     
     med = median(SegImage, disk(radius))
-    local_max = peak_local_max(med, min_distance=math.floor(radius*1.2),indices=False)
+    local_max = peak_local_max(med, min_distance=math.floor(radius*1.2), indices=False)
 
     mask = med > threshold
 
-    mask = binary_dilation(mask, np.ones((2,2)))
+    mask = binary_dilation(mask, np.ones((2, 2)))
     masked_peaks = local_max*mask
 
     seed_label = label(masked_peaks)
 
-    watershed_labels = watershed(image = -med, markers = seed_label, 
-                                 mask = mask, watershed_line=True,compactness=20)
+    watershed_labels = watershed(image=-med, markers=seed_label,
+                                 mask=mask, watershed_line=True, compactness=20)
 
     selem = disk(1)
     dilated_labels = erosion(watershed_labels, selem)
     selem = disk(1)
     dilated_labels = dilation(dilated_labels, selem)
 
-    labels2=labeling>0
+    labels2 = labeling > 0
 
     props = regionprops(dilated_labels, intensity_image=labels2)
 
@@ -444,14 +442,15 @@ def rescue_cells(img,seg_channels, labeling):
 
     finalMask = labels_store[dilated_labels]
 
-    combinelabel=(labeling+finalMask)
-    combinelabel=label(combinelabel)
+    combinelabel = (labeling+finalMask)
+    combinelabel = label(combinelabel)
     
     return combinelabel
 
 ####################################################################################
 #                            POSTPROCESSSING FUNCTIONS 
 ####################################################################################
+
 
 def remove_small_objects(segments, minsize):
     
@@ -477,8 +476,9 @@ def remove_small_objects(segments, minsize):
     
     return out
 
+
 def remove_large_objects(segments, maxsize):
-    
+
     """Remove large segmented objects
     
     Parameters
@@ -501,13 +501,14 @@ def remove_large_objects(segments, maxsize):
     
     return out
 
-def simulate_cell(label, dist):
+
+def simulate_cell(_label, dist):
     
     """Dilate labels by fixed amount to simulate cells
     
     Parameters
     ----------
-    label: numpy array of segmentation labels
+    _label: numpy array of segmentation labels
     dist: number of pixels to dilate
  
     Returns
@@ -516,7 +517,7 @@ def simulate_cell(label, dist):
     
     """
     
-    expanded = expand_labels(label, dist)
+    expanded = expand_labels(_label, dist)
     
     return expanded
 
@@ -524,7 +525,8 @@ def simulate_cell(label, dist):
 #                            DATA EXPORT FUNCTIONS 
 ####################################################################################
 
-def feature_extraction(img, labels,channellist):
+
+def feature_extraction(img, labels, channel_list):
     
     """Extract per cell expression for all channels
     
@@ -532,7 +534,7 @@ def feature_extraction(img, labels,channellist):
     ----------
     img : Multichannel image as numpy array
     labels: 2d segmentation label numpy array
-    channellist: list containing channel names
+    channel_list: list containing channel names
  
     Returns
     -------
@@ -540,35 +542,35 @@ def feature_extraction(img, labels,channellist):
     
     """
     
-    #Image=img
-    #img = AICSImage(Image)
+    # Image=img
+    # img = AICSImage(Image)
     
-    #Get list of channels in ome.tiff
-    Channels=channellist
-    numchannels=len(Channels)
+    # Get list of channels in ome.tiff
+    channels = channel_list
+    num_channels = len(channels)
     
-    #Read Image
-    #img = load_tiff(imagepath)
+    # Read Image
+    # img = load_tiff(image_path)
     
-    #Get coords from labels and create a dataframe to populate mean intensitoes
-    props = regionprops_table(labels, properties=['label','centroid'])
-    perCellDataDF = pd.DataFrame(props)
+    # G et coords from labels and create a dataframe to populate mean intensities
+    props = regionprops_table(labels, properties=['label', 'centroid'])
+    per_cell_data_df = pd.DataFrame(props)
 
-    #Loop through each tiff channel and append mean intensity to dataframe
-    for x in range(0,numchannels,1):
+    # Loop through each tiff channel and append mean intensity to dataframe
+    for x in range(0, num_channels, 1):
         
-        Image=img[x,:,:]
+        image = img[x, :, :]
         
-        props = regionprops_table(labels, intensity_image=Image, properties=['mean_intensity'])
-        datatemp = pd.DataFrame(props)
-        datatemp.columns = [Channels[x]]
-        perCellDataDF=pd.concat([perCellDataDF,datatemp], axis=1)
+        props = regionprops_table(labels, intensity_image=image, properties=['mean_intensity'])
+        data_temp = pd.DataFrame(props)
+        data_temp.columns = [channels[x]]
+        per_cell_data_df = pd.concat([per_cell_data_df, data_temp], axis=1)
     
-    #export and save a .csv file
-    #perCellDataDF.to_csv(image+'perCellDataCSV.csv')
-    #perCellDataCSV=perCellDataDF.to_csv
+    # export and save a .csv file
+    # perCellDataDF.to_csv(image+'perCellDataCSV.csv')
+    # perCellDataCSV=perCellDataDF.to_csv
     
-    return perCellDataDF
+    return per_cell_data_df
 
 
 ####################################################################################
