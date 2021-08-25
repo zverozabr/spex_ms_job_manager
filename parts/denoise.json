@@ -1,0 +1,8 @@
+{
+"start_params": [{"image_path": "", "description": "path to file what we do"}, {"channels_list": [], "description": "list of channels IDS(0,2,3)"}],
+"script_path": "median_denoise",
+"return": [{"data": [], "description": "this function return 3d array"}],
+"description": "Remove median noise from img",
+"depends": [],
+"name": "denoise"
+}
