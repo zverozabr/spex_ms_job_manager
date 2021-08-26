@@ -45,7 +45,7 @@ from deepcell.applications import Mesmer
 ####################################################################################
 
 
-def load_tiff(img,is_mibi=True):
+def load_tiff(image, is_mibi=True):
     
     """Load image and check/correct for dimension ordering
     
@@ -60,59 +60,59 @@ def load_tiff(img,is_mibi=True):
     Channels : list
     
     """
-    file=img
-    img = AICSImage(img)
+    file = image
+    img = AICSImage(image)
     
-    channel_len=max(img.size("STCZ")) #It is assumed that the dimension with largest length has the channels
-    order=("S","T","C","Z")
-    dim=img.shape
+    channel_len = max(img.size("STCZ"))  # It is assumed that the dimension with largest length has the channels
+    order = ("S", "T", "C", "Z")
+    dim = img.shape
 
-    x=0
+    x = 0
     for x in range(5):
-        if dim[x]==channel_len:
+        if dim[x] == channel_len:
             break
     order[x]
-    string=str(order[x])
-    string+="YX"
+    string = str(order[x])
+    string += "YX"
     
-    if string=="SYX":
-        ImageDASK=img.get_image_dask_data(string,T=0,C=0,Z=0)
-    if string=="TYX":
-        ImageDASK=img.get_image_dask_data(string,S=0,C=0,Z=0)
-    if string=="CYX":
-        ImageDASK=img.get_image_dask_data(string,S=0,T=0,Z=0)
-    if string=="ZYX":
-        ImageDASK=img.get_image_dask_data(string,S=0,T=0,C=0)
+    if string == "SYX":
+        image_dask = img.get_image_dask_data(string, T=0, C=0, Z=0)
+    if string == "TYX":
+        image_dask = img.get_image_dask_data(string, S=0, C=0, Z=0)
+    if string == "CYX":
+        image_dask = img.get_image_dask_data(string, S=0, T=0, Z=0)
+    if string == "ZYX":
+        image_dask = img.get_image_dask_data(string, S=0, T=0, C=0)
     
-    ImageTrue = ImageDASK.compute()
+    image_true = image_dask.compute()
 
-    # temporaly
+    # temporally
     is_mibi = False
-    # temporaly
-    if is_mibi==True:
-        Channel_list = []
+    # temporally
+    if is_mibi:
+        channel_list = []
         with TiffFile(file) as tif:
             for page in tif.pages:
                 # get tags as json
                 description = json.loads(page.tags['ImageDescription'].value)
-                Channel_list.append(description['channel.target'])
+                channel_list.append(description['channel.target'])
                 # only load supplied channels
-                #if channels is not None and description['channel.target'] not in channels:
-                    #continue
+                # if channels is not None and description['channel.target'] not in channels:
+                # continue
 
-                    # read channel data
-                    #Channel_list.append((description['channel.mass'],description['channel.target']))
+                # read channel data
+                # Channel_list.append((description['channel.mass'],description['channel.target']))
     else:
-        Channel_list=img.get_channel_names()
+        channel_list = img.get_channel_names()
     
-    return ImageTrue, Channel_list
+    return image_true, channel_list
 
 
 ####################################################################################
 #                            PREPROCESSING FUNCTIONS 
 ####################################################################################
 
-def background_subtract(Img, ch, top,subtraction):
+def background_subtract(Img, ch, top, subtraction):
     
     """Subtract background signal from other channels
     

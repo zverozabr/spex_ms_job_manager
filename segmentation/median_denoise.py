@@ -4,12 +4,12 @@ import numpy as np
 from tifffile import TiffWriter
 
 
-def run(image='', channel_list=[]):
+def run(**kwargs):
 
-    image = '2.ome.tiff'
-    channel_list = [0, 1, 3]
+    image = kwargs.get('image')
+    channel_list = kwargs.get('channel_list')
 
-    image, channel = sp.load_tiff(image, is_mibi=True)
+    # image, channel = sp.load_tiff(image, is_mibi=True)
     median_image = sp.median_denoise(image, 5, channel_list)
 
     return median_image

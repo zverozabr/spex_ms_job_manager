@@ -1,20 +1,22 @@
 import glob
 import json
 import importlib.util
+import importlib
 
 
-def start_scenario(name="", **kwargs):
-    manifest_arr = glob.glob(f'parts/{name}.json', recursive=True)
+def start_scenario(script="", part="", **kwargs):
+    manifest_arr = glob.glob(f'{script}/{part}.json', recursive=True)
     for file in manifest_arr:
         data = json.load(open(file))
-        print(data)
-        spec = importlib.util.spec_from_file_location(data["script_path"], f'./parts/{data["script_path"]}.py')
-        run = importlib.util.module_from_spec(spec)
-        # scr = importlib.import_module(f'./parts/{data["script_path"]}.py', package=__name__)
-        return run(**kwargs)
+        if depends := data.get('depends'):
+            for item in depends:
+                res = start_scenario(script=script, part=item, **kwargs)
+                kwargs.update(res)
+        module = importlib.import_module(f'.{data["script_path"]}', package='segmentation')
+        return module.run(**kwargs)
 
 
-result = start_scenario(name='denoise', image='2.ome.tiff', channel_list=[0, 2, 3])
+result = start_scenario(script='segmentation', part='denoise', image_path='2.ome.tiff', channel_list=[0, 2, 3])
 print(result)
 
 

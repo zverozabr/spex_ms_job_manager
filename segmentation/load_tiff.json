@@ -1,0 +1,8 @@
+{
+"start_params": [{"image_path": "", "description": "path to file what we do"}],
+"script_path": "load_tiff",
+"return": [{"data": [], "description": "Image opened by ASIImage, and channel array"}],
+"description": "open image",
+"depends": [],
+"name": "load_tiff"
+}
