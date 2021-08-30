@@ -45,7 +45,7 @@ from deepcell.applications import Mesmer
 ####################################################################################
 
 
-def load_tiff(image, is_mibi=True):
+def load_tiff(img,is_mibi=True):
     
     """Load image and check/correct for dimension ordering
     
@@ -60,59 +60,59 @@ def load_tiff(image, is_mibi=True):
     Channels : list
     
     """
-    file = image
-    img = AICSImage(image)
+    file=img
+    img = AICSImage(img)
     
-    channel_len = max(img.size("STCZ"))  # It is assumed that the dimension with largest length has the channels
-    order = ("S", "T", "C", "Z")
-    dim = img.shape
+    channel_len=max(img.size("STCZ")) #It is assumed that the dimension with largest length has the channels
+    order=("S","T","C","Z")
+    dim=img.shape
 
-    x = 0
+    x=0
     for x in range(5):
-        if dim[x] == channel_len:
+        if dim[x]==channel_len:
             break
     order[x]
-    string = str(order[x])
-    string += "YX"
+    string=str(order[x])
+    string+="YX"
     
-    if string == "SYX":
-        image_dask = img.get_image_dask_data(string, T=0, C=0, Z=0)
-    if string == "TYX":
-        image_dask = img.get_image_dask_data(string, S=0, C=0, Z=0)
-    if string == "CYX":
-        image_dask = img.get_image_dask_data(string, S=0, T=0, Z=0)
-    if string == "ZYX":
-        image_dask = img.get_image_dask_data(string, S=0, T=0, C=0)
+    if string=="SYX":
+        ImageDASK=img.get_image_dask_data(string,T=0,C=0,Z=0)
+    if string=="TYX":
+        ImageDASK=img.get_image_dask_data(string,S=0,C=0,Z=0)
+    if string=="CYX":
+        ImageDASK=img.get_image_dask_data(string,S=0,T=0,Z=0)
+    if string=="ZYX":
+        ImageDASK=img.get_image_dask_data(string,S=0,T=0,C=0)
     
-    image_true = image_dask.compute()
+    ImageTrue = ImageDASK.compute()
 
-    # temporally
+    # temporaly
     is_mibi = False
-    # temporally
-    if is_mibi:
-        channel_list = []
+    # temporaly
+    if is_mibi==True:
+        Channel_list = []
         with TiffFile(file) as tif:
             for page in tif.pages:
                 # get tags as json
                 description = json.loads(page.tags['ImageDescription'].value)
-                channel_list.append(description['channel.target'])
+                Channel_list.append(description['channel.target'])
                 # only load supplied channels
-                # if channels is not None and description['channel.target'] not in channels:
-                # continue
+                #if channels is not None and description['channel.target'] not in channels:
+                    #continue
 
-                # read channel data
-                # Channel_list.append((description['channel.mass'],description['channel.target']))
+                    # read channel data
+                    #Channel_list.append((description['channel.mass'],description['channel.target']))
     else:
-        channel_list = img.get_channel_names()
+        Channel_list=img.get_channel_names()
     
-    return image_true, channel_list
+    return ImageTrue, Channel_list
 
 
 ####################################################################################
 #                            PREPROCESSING FUNCTIONS 
 ####################################################################################
 
-def background_subtract(Img, ch, top, subtraction):
+def background_subtract(Img, ch, top,subtraction):
     
     """Subtract background signal from other channels
     
@@ -227,7 +227,7 @@ def median_denoise(image, kernal, ch):
 ####################################################################################
 
 
-def stardist_cellseg(img, seg_channels, scaling, threshold, min, max):
+def stardist_cellseg(image, seg_channels, scaling, threshold, _min, _max):
     
     """Segment image by stardist deeplearning method
     
@@ -237,8 +237,8 @@ def stardist_cellseg(img, seg_channels, scaling, threshold, min, max):
     seg_channels: list of indices to use for nuclear segmentation
     scaling: Integer value scaling
     threshold: probability cutoff
-    min: bottom percentile normalization
-    max: top percentile normalization
+    _min: bottom percentile normalization
+    _max: top percentile normalization
  
     Returns
     -------
@@ -246,19 +246,19 @@ def stardist_cellseg(img, seg_channels, scaling, threshold, min, max):
     
     """
     
-    temp2=np.zeros((img.shape[1],img.shape[2]))
+    temp2 = np.zeros((image.shape[1], image.shape[2]))
     for i in seg_channels:
-        temp=img[i]
-        temp2=temp+temp2
+        temp = image[i]
+        temp2 = temp+temp2
     
-    SegImage=temp2
-    SegImage = cv2.resize(SegImage, (SegImage.shape[1]*scaling, 
-                         SegImage.shape[0]*scaling),
-                        interpolation=cv2.INTER_NEAREST)
+    seg_image=temp2
+    seg_image = cv2.resize(seg_image, (seg_image.shape[1] * scaling,
+                                       seg_image.shape[0] * scaling),
+                           interpolation=cv2.INTER_NEAREST)
     
     model = StarDist2D.from_pretrained('2D_versatile_fluo') # model for multiplex IF images
     
-    image_norm = normalize(SegImage[::1,::1], min, max) 
+    image_norm = normalize(seg_image[::1, ::1], _min, _max)
     labels, details = model.predict_instances(image_norm, prob_thresh=threshold)
     
     labels = cv2.resize(labels, (labels.shape[1]//scaling, 
@@ -308,7 +308,7 @@ def cellpose_cellseg(img, seg_channels,diamtr, scaling):
     return labels_final
 
 
-def deepcell_segmentation(img, seg_channels, mpp):
+def deepcell_segmentation(image, seg_channels, mpp):
 
     """Segment image by deepcell deeplearning method
 
@@ -323,19 +323,19 @@ def deepcell_segmentation(img, seg_channels, mpp):
     labels_final : per cell segmentation as numpy array
 
     """
-    temp2 = np.zeros((img.shape[1], img.shape[2]))
+    temp2 = np.zeros((image.shape[1], image.shape[2]))
     for i in seg_channels:
-        temp = img[i]
+        temp = image[i]
         temp2 = temp+temp2
 
-    x=temp2
+    x = temp2
     y = np.expand_dims(x, axis=0)
     pseudoIF = np.stack((y, y), axis=3)
 
     app = Mesmer()
     y_pred = app.predict(pseudoIF, image_mpp=mpp, compartment='nuclear')
 
-    labels=np.squeeze(y_pred)
+    labels = np.squeeze(y_pred)
 
     return labels
 
@@ -384,28 +384,28 @@ def classicwatershed_cellseg(img, seg_channels):
     return dilated_labels
 
 
-def rescue_cells(img, seg_channels, labeling):
+def rescue_cells(image, seg_channels, label_ling):
     """Rescue/Segment cells that deep learning approach may have missed
     
     Parameters
     ----------
-    Image : raw image 2d numpy array
+    image : raw image 2d numpy array
     seg_channels: list of indices to use for nuclear segmentation
-    label: numpy array of segmentation labels
+    label_ling: numpy array of segmentation labels
  
     Returns
     -------
-    combinelabel : 2D numpy array with added cells
+    combine_label : 2D numpy array with added cells
     
     """
-    temp2=np.zeros((img.shape[1],img.shape[2]))
+    temp2 = np.zeros((image.shape[1], image.shape[2]))
     for i in seg_channels:
-        temp=img[i]
-        temp2=temp+temp2
+        temp = image[i]
+        temp2 = temp+temp2
 
-    SegImage=temp2/len(seg_channels)
+    seg_image = temp2 / len(seg_channels)
     
-    props = regionprops_table(labeling, intensity_image=SegImage, 
+    props = regionprops_table(label_ling, intensity_image=seg_image,
                               properties=['mean_intensity', 'area'])
 
     meanint_cell = np.mean(props['mean_intensity'])
@@ -414,7 +414,7 @@ def rescue_cells(img, seg_channels, labeling):
     radius = math.floor(math.sqrt(meansize_cell/3.14)*0.5)
     threshold = meanint_cell*0.5
     
-    med = median(SegImage, disk(radius))
+    med = median(seg_image, disk(radius))
     local_max = peak_local_max(med, min_distance=math.floor(radius*1.2), indices=False)
 
     mask = med > threshold
@@ -432,7 +432,7 @@ def rescue_cells(img, seg_channels, labeling):
     selem = disk(1)
     dilated_labels = dilation(dilated_labels, selem)
 
-    labels2 = labeling > 0
+    labels2 = label_ling > 0
 
     props = regionprops(dilated_labels, intensity_image=labels2)
 
@@ -444,12 +444,12 @@ def rescue_cells(img, seg_channels, labeling):
         ):
             labels_store[cell.label] = 0
 
-    finalMask = labels_store[dilated_labels]
+    final_mask = labels_store[dilated_labels]
 
-    combinelabel = (labeling+finalMask)
-    combinelabel = label(combinelabel)
+    combine_label = (label_ling + final_mask)
+    combine_label = label(combine_label)
     
-    return combinelabel
+    return combine_label
 
 ####################################################################################
 #                            POSTPROCESSSING FUNCTIONS 

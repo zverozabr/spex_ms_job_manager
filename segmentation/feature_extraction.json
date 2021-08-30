@@ -1,0 +1,12 @@
+{
+"start_params": [
+  {"img": [], "description": "Multichannel image as numpy array"},
+  {"new_labels": [], "description": "2d segmentation label numpy array"},
+  {"channels_list": [], "description": "list of indices to use for nuclear segmentation IDS(0,2,3)"}
+],
+"script_path": "feature_extraction",
+"return": [{"perCellDataDf": [], "description": "Pandas dataframe with cell by expression data"}],
+"description": "Extract per cell expression for all channels",
+"depends_script": ["simulate_cell"],
+"name": "feature_extraction"
+}

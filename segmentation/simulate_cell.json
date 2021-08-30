@@ -1,0 +1,11 @@
+{
+"start_params": [
+  {"new_label": [], "description": "numpy array of segmentation labels"},
+  {"dist": [], "description": "number of pixels to dilate"}
+],
+"script_path": "simulate_cell",
+"return": [{"data": [], "description": "2D label numpy array with simulated cells"}],
+"description": "Dilate labels by fixed amount to simulate cells",
+"depends_script": ["rescues_cells"],
+"name": "simulate_cell"
+}

@@ -1,0 +1,12 @@
+{
+"start_params": [
+  {"image": [], "description": " raw image 2d numpy array"},
+  {"channels_list": [], "description": "list of indices to use for nuclear segmentation IDS(0,2,3)"},
+  {"label_ling": 0, "description": "numpy array of segmentation labels"}
+],
+"script_path": "rescues_cells",
+"return": [{"data": [], "description": "2D numpy array with added cells"}],
+"description": "Rescue/Segment cells that deep learning approach may have missed",
+"depends_script": ["deepcell_segmentation"],
+"name": "rescues_cells"
+}
