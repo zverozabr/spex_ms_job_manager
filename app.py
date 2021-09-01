@@ -5,7 +5,6 @@ import importlib
 
 
 def start_scenario(script="", part="", **kwargs):
-    print(script, part)
     manifest_arr = glob.glob(f'{script}/{part}.json', recursive=True)
     for file in manifest_arr:
         data = json.load(open(file))
@@ -14,6 +13,22 @@ def start_scenario(script="", part="", **kwargs):
                 res = start_scenario(script=script, part=item, **kwargs)
                 kwargs.update(res)
         module = importlib.import_module(f'.{data["script_path"]}', package=script)
+        print(script, part)
+        params = data.get('start_params')
+        for item in params:
+            key_name = list(item.keys())[0]
+            if kwargs.get(key_name) is None and key_name != 'or':
+                raise ValueError(f"Not have param {key_name} in script: {script}, in part {part}")
+            elif key_name == 'or':
+                have_data = False
+                for param in item.get(key_name):
+                    sub_item = list(param.keys())[0]
+                    if kwargs.get(sub_item) is not None:
+                        have_data = True
+                        pass
+                if not have_data:
+                    raise ValueError(f"Not have any of: {item.get(key_name)} params in script: {script}, in part {part}")
+
         res = module.run(**kwargs)
         kwargs.update(res)
         return kwargs
@@ -50,9 +65,19 @@ def start_scenario(script="", part="", **kwargs):
 #     mpp=0.39)
 
 
+# result = start_scenario(
+#     script='segmentation',
+#     part='feature_extraction',
+#     image_path='2.ome.tiff',
+#     channel_list=[0, 2, 3],
+#     kernal=5,
+#     mpp=0.39,
+#     dist=8)
+
+
 result = start_scenario(
     script='segmentation',
-    part='feature_extraction',
+    part='find_boundaries',
     image_path='2.ome.tiff',
     channel_list=[0, 2, 3],
     kernal=5,
