@@ -4,7 +4,8 @@ import importlib.util
 import importlib
 
 
-def get_script_params(script: str = "", part: str = "", subpart: list = []):
+def get_script_params(script: str = "", part: str = "", subpart: list = None):
+    subpart = subpart if subpart else []
     result: list = []
     for file in glob.glob(f'{script}/{part}.json', recursive=True):
         data = json.load(open(file))
@@ -24,7 +25,8 @@ def get_script_params(script: str = "", part: str = "", subpart: list = []):
     return result
 
 
-def start_scenario(script: str = "", part: str = "", subpart: list = [], **kwargs):
+def start_scenario(script: str = "", part: str = "", subpart: list = None, **kwargs):
+    subpart = subpart if subpart else []
     for file in glob.glob(f'{script}/{part}.json', recursive=True):
         data = json.load(open(file))
 
