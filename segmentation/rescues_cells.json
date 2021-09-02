@@ -12,6 +12,6 @@
 "script_path": "rescues_cells",
 "return": [{"data": [], "description": "2D numpy array with added cells"}],
 "description": "Rescue/Segment cells that deep learning approach may have missed",
-"depends_script": ["deepcell_segmentation"],
+"depends_and_script": [], "depends_or_script": ["deepcell_segmentation", "stardist_cellseg"],
 "name": "rescues_cells"
 }

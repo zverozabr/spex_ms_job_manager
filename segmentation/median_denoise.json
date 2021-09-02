@@ -7,6 +7,6 @@
 "script_path": "median_denoise",
 "return": [{"data": [], "description": "this function return 3d array"}],
 "description": "Remove median noise from img",
-"depends_script": ["load_tiff"],
+"depends_and_script": ["load_tiff"],
 "name": "denoise"
 }

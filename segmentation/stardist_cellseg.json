@@ -1,7 +1,7 @@
 {
 "start_params": [
   {"median_image": "", "description": "Multichannel image as numpy array"},
-  {"channels_list": [], "description": "list of indices to use for nuclear segmentation IDS(0,2,3)"},
+  {"channel_list": [], "description": "list of indices to use for nuclear segmentation IDS(0,2,3)"},
   {"scaling": 0, "description": "Integer value scaling"},
   {"threshold": 0, "description": "probability cutoff"},
   {"_min": 0, "description": "bottom percentile normalization"},
@@ -10,6 +10,6 @@
 "script_path": "stardist_cellseg",
 "return": [{"data": [], "description": "this function return 3d array"}],
 "description": "Segment image by stardist deeplearning method",
-"depends_script": ["median_denoise"],
+"depends_and_script": ["median_denoise"],
 "name": "stardist"
 }

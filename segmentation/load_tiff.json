@@ -3,6 +3,6 @@
 "script_path": "load_tiff",
 "return": [{"data": [], "description": "Image opened by ASIImage, and channel array"}],
 "description": "open image",
-"depends_script": [],
+"depends_and_script": [],
 "name": "load_tiff"
 }

@@ -7,6 +7,6 @@
 "script_path": "feature_extraction",
 "return": [{"perCellDataDf": [], "description": "Pandas dataframe with cell by expression data"}],
 "description": "Extract per cell expression for all channels",
-"depends_script": ["simulate_cell"],
+"depends_and_script": ["simulate_cell"],
 "name": "feature_extraction"
 }
