@@ -133,10 +133,38 @@ def start_scenario(script: str = "", part: str = "", subpart: list = None, **kwa
 # print(result)
 
 
-params_res = get_script_params(
-    script='segmentation',
-    part='find_boundaries',
-    subpart=['stardist_cellseg']
-)
+# params_res = get_script_params(
+#     script='segmentation',
+#     part='find_boundaries',
+#     subpart=None
+# )
+#
+# print(params_res)
 
-print(params_res)
+
+def get_script_structure(folder: str = None):
+    result: list = []
+    if folder:
+        folder = folder + '/'
+    for file in glob.glob(f'{folder}stages.json', recursive=True):
+        data = json.load(open(file))
+        for key, value in data.items():
+            
+        # if depends := data.get('depends_and_script'):
+        #     for item in depends:
+        #         result += get_script_params(script=script, part=item, subpart=subpart)
+        # if depends := data.get('depends_or_script'):
+        #     if scripts := set(subpart).intersection(set(depends)):
+        #         for item in scripts:
+        #             result += get_script_params(script=script, part=item, subpart=subpart)
+        #
+        # print(script, part)
+        # if params := data.get('start_params'):
+        #     result += [{part: params}]
+
+    return result
+
+
+param_res = get_script_structure(folder='segmentation')
+
+print(param_res)

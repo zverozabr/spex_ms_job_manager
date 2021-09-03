@@ -8,5 +8,5 @@
 "return": [{"data": [], "description": "this function return 3d array"}],
 "description": "Remove median noise from img",
 "depends_and_script": ["load_tiff"],
-"name": "denoise"
+"name": "denoise", "stage": "2"
 }

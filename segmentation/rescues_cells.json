@@ -13,5 +13,5 @@
 "return": [{"data": [], "description": "2D numpy array with added cells"}],
 "description": "Rescue/Segment cells that deep learning approach may have missed",
 "depends_and_script": [], "depends_or_script": ["deepcell_segmentation", "stardist_cellseg"],
-"name": "rescues_cells"
+"name": "rescues_cells", "stage": "4"
 }

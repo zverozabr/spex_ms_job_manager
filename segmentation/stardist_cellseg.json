@@ -11,5 +11,5 @@
 "return": [{"data": [], "description": "this function return 3d array"}],
 "description": "Segment image by stardist deeplearning method",
 "depends_and_script": ["median_denoise"],
-"name": "stardist"
+"name": "stardist", "stage": "3"
 }

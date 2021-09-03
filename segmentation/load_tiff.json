@@ -4,5 +4,5 @@
 "return": [{"data": [], "description": "Image opened by ASIImage, and channel array"}],
 "description": "open image",
 "depends_and_script": [],
-"name": "load_tiff"
+"name": "load_tiff", "stage": "1"
 }

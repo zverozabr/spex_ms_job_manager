@@ -8,5 +8,5 @@
 "return": [{"data": [], "description": "per cell segmentation as numpy array"}],
 "description": "Segment image by deepcell deeplearning method",
 "depends_and_script": ["median_denoise"],
-"name": "deepcell_segment"
+"name": "deepcell_segmentation", "stage": "3"
 }

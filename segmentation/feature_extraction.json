@@ -8,5 +8,5 @@
 "return": [{"perCellDataDf": [], "description": "Pandas dataframe with cell by expression data"}],
 "description": "Extract per cell expression for all channels",
 "depends_and_script": ["simulate_cell"],
-"name": "feature_extraction"
+"name": "feature_extraction", "stage": "5"
 }
