@@ -19,6 +19,8 @@ keras = "==2.6.0"
 mxnet = "==1.6.0"
 numpy = "==1.19.2"
 deepcell-tracking = {path = "./DeepCell"}
+spex-common = {editable = true, path = "./../common"}
+omero-py = "==5.9.1"
 
 [dev-packages]
 
