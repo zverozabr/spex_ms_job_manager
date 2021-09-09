@@ -4,11 +4,12 @@ from spex_common.models.Task import task
 import spex_common.modules.omeroweb as omeroweb
 from glob import glob
 import json
-import importlib.util
 import importlib
 import os
 from services.Utils import download_file, getAbsoluteRelative
-
+from services.Timer import every
+import sys
+import pickle
 collection = 'tasks'
 
 
@@ -41,22 +42,21 @@ def get_script_params(script: str = "", part: str = "", subpart: list = None):
     return result
 
 
-def start_scenario(script: str = "", part: str = "", subpart: list = None, **kwargs):
+def start_scenario(script: str = "", part: str = "", subpart: list = None, folder: str = '', **kwargs):
     subpart = subpart if subpart else []
-    for file in glob(f'{script}/{part}.json', recursive=True):
+    for file in glob(f'{folder}/{part}.json', recursive=True):
         data = json.load(open(file))
 
         if depends := data.get('depends_and_script'):
             for item in depends:
-                res = start_scenario(script=script, part=item, subpart=subpart, **kwargs)
+                res = start_scenario(script=script, part=item, subpart=subpart, folder=folder, **kwargs)
                 kwargs.update(res)
         if depends := data.get('depends_or_script'):
             if scripts := set(subpart).intersection(set(depends)):
                 for item in scripts:
-                    res = start_scenario(script=script, part=item, subpart=subpart, **kwargs)
+                    res = start_scenario(script=script, part=item, subpart=subpart, folder=folder, **kwargs)
                     kwargs.update(res)
 
-        module = importlib.import_module(f'.{data["script_path"]}', package=script)
         print(script, part)
         params = data.get('start_params')
         for item in params:
@@ -85,8 +85,10 @@ def start_scenario(script: str = "", part: str = "", subpart: list = None, **kwa
                     raise ValueError(
                         f"Not have all of: {item.get(key_name)} params in script: {script}, in part {part}"
                     )
-
+        sys.path.append(folder)
+        module = importlib.import_module(data["script_path"])
         res = module.run(**kwargs)
+
         kwargs.update(res)
         return kwargs
 
@@ -196,9 +198,9 @@ def get_image_from_omero(a_task):
         return path
 
 
-def update_status(status, onetask):
+def update_status(status, onetask, result):
     search = 'FILTER doc._key == @value LIMIT 1'
-    db_instance().update(collection, {'status': status}, search, value=onetask['id'])
+    db_instance().update(collection, {'status': status, 'result': result}, search, value=onetask['id'])
 
 
 def take_start_return_result():
@@ -210,14 +212,24 @@ def take_start_return_result():
         if path is None:
             update_status(-1, a_task)
             return None
-        if os.path.isfile(getAbsoluteRelative(path)):
-            a_task['params'].update(image_path=getAbsoluteRelative(path))
-            a_task['params']["script"] = f'{os.getenv("DATA_STORAGE")}\\Scripts\\{a_task["params"]["script"]}'
+        abs_path = getAbsoluteRelative(path)
+        script_path = getAbsoluteRelative(f'{os.getenv("DATA_STORAGE")}\\Scripts\\{a_task["params"]["script"]}')
+        filename = f'{os.path.dirname(abs_path)}\\result.pickle'
+        if os.path.isfile(abs_path):
+            a_task['params'].update(image_path=abs_path)
+            a_task["params"].update(folder=script_path)
             result = start_scenario(**a_task["params"])
-            print(result)
+            outfile = open(filename, 'wb')
+            pickle.dump(result, outfile)
+            outfile.close()
+        if os.path.isfile(filename):
+            update_status(100, a_task, result=getAbsoluteRelative(filename, False))
+            print("1 task complete")
+    else:
+        print("0 task")
 
 
 if __name__ == '__main__':
     load_config()
-    take_start_return_result()
+    every(1, take_start_return_result)
 
