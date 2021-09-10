@@ -1,0 +1,10 @@
+{
+"start_params": [
+  {"median_image": "", "description": "Multichannel numpy array (C,X,Y)"}
+],
+"script_path": "nlm_denoise",
+"return": [{"median_image": [], "description": "Denoised image stack as numpy array (C,X,Y)"}],
+"description": "Non local means denoising",
+"depends_and_script": ["load_tiff"],
+"name": "nlm_denoise", "stage": "2"
+}

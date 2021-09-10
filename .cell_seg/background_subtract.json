@@ -1,0 +1,13 @@
+{
+"start_params": [
+  {"median_image": "", "description": "Multichannel numpy array (C,X,Y)"},
+  {"ch": 0, "description": "Index of background channel"},
+  {"top": 0, "description": "ignore pixels above this threshold"},
+  {"subtraction": 0, "description": "how many intensity units to subtract from other channels"}
+],
+"script_path": "background_subtract",
+"return": [{"median_image": [], "description": "Background corrected Image Stack"}],
+"description": "Subtract background signal from other channels",
+"depends_and_script": ["load_tiff"],
+"name": "background_subtract", "stage": "2"
+}

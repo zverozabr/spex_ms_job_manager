@@ -9,4 +9,4 @@ def run(**kwargs):
     image = kwargs.get('image_path')
     image, channel = sp.load_tiff(image, is_mibi=True)
 
-    return {'image': image, 'channel': channel}
+    return {'median_image': image, 'channel': channel}

@@ -10,6 +10,7 @@ from services.Utils import download_file, getAbsoluteRelative
 from services.Timer import every
 import sys
 import pickle
+
 collection = 'tasks'
 
 
@@ -23,39 +24,61 @@ def scripts_list():
 
 def get_script_params(script: str = "", part: str = "", subpart: list = None):
     subpart = subpart if subpart else []
-    result: list = []
+    _result: list = []
     for file in glob(f'{script}/{part}.json', recursive=True):
         data = json.load(open(file))
 
         if depends := data.get('depends_and_script'):
             for item in depends:
-                result += get_script_params(script=script, part=item, subpart=subpart)
+                _result += get_script_params(script=script, part=item, subpart=subpart)
         if depends := data.get('depends_or_script'):
             if scripts := set(subpart).intersection(set(depends)):
                 for item in scripts:
-                    result += get_script_params(script=script, part=item, subpart=subpart)
+                    _result += get_script_params(script=script, part=item, subpart=subpart)
 
         print(script, part)
         if params := data.get('start_params'):
-            result += [{part: params}]
+            _result += [{part: params}]
 
-    return result
+    return _result
 
 
-def start_scenario(script: str = "", part: str = "", subpart: list = None, folder: str = '', **kwargs):
+def start_scenario(
+        script: str = "",
+        part: str = "",
+        subpart: list = None,
+        folder: str = '',
+        and_scripts: list = None,
+        start_depends: bool = True,
+        **kwargs
+):
     subpart = subpart if subpart else []
+    and_scripts = and_scripts if and_scripts else []
     for file in glob(f'{folder}/{part}.json', recursive=True):
         data = json.load(open(file))
 
-        if depends := data.get('depends_and_script'):
-            for item in depends:
-                res = start_scenario(script=script, part=item, subpart=subpart, folder=folder, **kwargs)
-                kwargs.update(res)
-        if depends := data.get('depends_or_script'):
-            if scripts := set(subpart).intersection(set(depends)):
-                for item in scripts:
-                    res = start_scenario(script=script, part=item, subpart=subpart, folder=folder, **kwargs)
+        if start_depends is True:
+            if depends := data.get('depends_and_script'):
+                for item in depends:
+                    res = start_scenario(
+                        script=script,
+                        part=item,
+                        subpart=subpart,
+                        folder=folder,
+                        and_scripts=and_scripts,
+                        **kwargs)
                     kwargs.update(res)
+            if depends := data.get('depends_or_script'):
+                if scripts := set(subpart).intersection(set(depends)):
+                    for item in scripts:
+                        res = start_scenario(
+                            script=script,
+                            part=item,
+                            subpart=subpart,
+                            folder=folder,
+                            and_scripts=and_scripts,
+                            **kwargs)
+                        kwargs.update(res)
 
         print(script, part)
         params = data.get('start_params')
@@ -90,74 +113,24 @@ def start_scenario(script: str = "", part: str = "", subpart: list = None, folde
         res = module.run(**kwargs)
 
         kwargs.update(res)
+
+        if and_scripts:
+            stages = get_script_structure(script)
+            for _script in and_scripts:
+                cur_stage = data.get('stage')
+                if item := [element for element in stages.get(cur_stage) if element["script_path"] == _script]:
+                    res = start_scenario(
+                            script=script,
+                            part=_script,
+                            subpart=subpart,
+                            folder=folder,
+                            start_depends=False,
+                            **kwargs
+                        )
+                    kwargs.update(res)
+
         return kwargs
 
-
-# result = start_scenario(script='segmentation', part='denoise', image_path='2.ome.tiff', channel_list=[0, 2, 3])
-#  1, 0.5, 1, 98.5
-# result = start_scenario(
-#     script='segmentation',
-#     part='stardist_cellseg',
-#     image_path='2.ome.tiff',
-#     kernal=5,
-#     channel_list=[0, 2, 3],
-#     scaling=1,
-#     threshold=0.5,
-#     _min=1,
-#     _max=98.5
-# )
-
-# result = start_scenario(
-#          script='segmentation',
-#          part='deepcell_segmentation',
-#          image_path='2.ome.tiff',
-#          channel_list=[0, 2, 3],
-#          kernal=5,
-#          mpp=0.39)
-
-# result = start_scenario(
-#     script='segmentation',
-#     part='rescues_cells',
-#     image_path='2.ome.tiff',
-#     channel_list=[0, 2, 3],
-#     kernal=5,
-#     mpp=0.39)
-
-
-# result = start_scenario(
-#     script='segmentation',
-#     part='feature_extraction',
-#     image_path='2.ome.tiff',
-#     channel_list=[0, 2, 3],
-#     kernal=5,
-#     mpp=0.39,
-#     dist=8)
-
-
-# result = start_scenario(
-#     script='segmentation',
-#     part='find_boundaries',
-#     subpart=['stardist_cellseg'],
-#     image_path='2.ome.tiff',
-#     channel_list=[0, 2, 3],
-#     threshold=0.5,
-#     _min=1,
-#     _max=98.5,
-#     scaling=1,
-#     kernal=5,
-#     mpp=0.39,
-#     dist=8)
-#
-# print(result)
-
-
-# params_res = get_script_params(
-#     script='segmentation',
-#     part='find_boundaries',
-#     subpart=['stardist_cellseg']
-# )
-#
-# print(params_res)
 
 def get_task():
     tasks = db_instance().select(collection, 'FILTER doc.status == 0 or doc.status == -1 and doc.content like @value '
@@ -229,7 +202,95 @@ def take_start_return_result():
         print("0 task")
 
 
-if __name__ == '__main__':
-    load_config()
-    every(1, take_start_return_result)
+# if __name__ == '__main__':
+#     load_config()
+#     every(1, take_start_return_result)
+
+
+# result = start_scenario(script='segmentation', part='denoise', image_path='2.ome.tiff', channel_list=[0, 2, 3])
+#  1, 0.5, 1, 98.5
+# result = start_scenario(
+#     script='segmentation',
+#     part='stardist_cellseg',
+#     image_path='2.ome.tiff',
+#     kernal=5,
+#     channel_list=[0, 2, 3],
+#     scaling=1,
+#     threshold=0.5,
+#     _min=1,
+#     _max=98.5
+# )
+
+# result = start_scenario(
+#          script='segmentation',
+#          part='deepcell_segmentation',
+#          image_path='2.ome.tiff',
+#          channel_list=[0, 2, 3],
+#          kernal=5,
+#          mpp=0.39)
+
+# result = start_scenario(
+#     script='segmentation',
+#     part='rescues_cells',
+#     image_path='2.ome.tiff',
+#     channel_list=[0, 2, 3],
+#     kernal=5,
+#     mpp=0.39)
+
+
+# result = start_scenario(
+#     script='segmentation',
+#     part='feature_extraction',
+#     image_path='2.ome.tiff',
+#     channel_list=[0, 2, 3],
+#     kernal=5,
+#     mpp=0.39,
+#     dist=8)
+
+
+# result = start_scenario(
+#     script='segmentation',
+#     part='find_boundaries',
+#     subpart=['stardist_cellseg'],
+#     image_path='2.ome.tiff',
+#     channel_list=[0, 2, 3],
+#     threshold=0.5,
+#     _min=1,
+#     _max=98.5,
+#     scaling=1,
+#     kernal=5,
+#     mpp=0.39,
+#     dist=8)
+#
+# print(result)
+
+
+# params_res = get_script_params(
+#     script='segmentation',
+#     part='find_boundaries',
+#     subpart=['stardist_cellseg']
+# )
+#
+# print(params_res)
+
+
+result = start_scenario(
+    script='cell_seg',
+    part='nlm_denoise',
+    and_scripts=['median_denoise', 'background_subtract'],
+    image_path='2.ome.tiff',
+    folder=".cell_seg",
+    channel_list=[0, 2, 3],
+    threshold=0.5,
+    _min=1,
+    _max=98.5,
+    scaling=1,
+    kernal=5,
+    mpp=0.39,
+    ch=0,
+    top=5,
+    subtraction=10,
+    dist=8)
+
+print(result)
 

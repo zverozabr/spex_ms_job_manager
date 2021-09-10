@@ -1,6 +1,6 @@
 {
 "start_params": [
-  {"image_path": "", "description": "path to file what we do"},
+  {"median_image": "", "description": "Multichannel numpy array (C,X,Y)"},
   {"kernal": 0, "description": "int, 5-7 is a typical range"},
   {"channel_list": [], "description": "list of channels IDS(0,2,3)"}
 ],
