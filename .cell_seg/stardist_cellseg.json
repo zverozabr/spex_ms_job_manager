@@ -7,9 +7,18 @@
   {"_min": 0, "description": "bottom percentile normalization"},
   {"_max": 0, "description": "top percentile normalization"}
 ],
-"script_path": "stardist_cellseg",
-"return": [{"data": [], "description": "this function return 3d array"}],
-"description": "Segment image by stardist deeplearning method",
-"depends_and_script": ["median_denoise"],
-"name": "stardist", "stage": "3"
+  "script_path": "stardist_cellseg",
+  "return": [
+    {"data": [], "description": "this function return 3d array"}
+  ],
+  "description": "Segment image by stardist deeplearning method",
+  "depends_and_script": [],
+  "depends_or_script": [
+    "median_denoise",
+    "nlm_denoise",
+    "background_subtract"
+  ],
+
+  "name": "stardist",
+  "stage": "3"
 }

@@ -112,7 +112,7 @@ def load_tiff(img,is_mibi=True):
 #                            PREPROCESSING FUNCTIONS 
 ####################################################################################
 
-def background_subtract(Img, ch, top,subtraction):
+def background_subtract(image, ch, top, subtraction):
     
     """Subtract background signal from other channels
     
@@ -128,23 +128,25 @@ def background_subtract(Img, ch, top,subtraction):
     Image Stack : Background corrected Image Stack
     
     """
-    Background_ch=Img[ch]
-    rawMaskDataCap = Background_ch
+    background_ch = image[ch]
+    raw_mask_data_cap = background_ch
+
+    raw_mask_data_cap[np.where(raw_mask_data_cap > top)] = top
+    guassian_bg = rescale_intensity(gaussian(raw_mask_data_cap, sigma=3))
     
-    rawMaskDataCap[np.where(rawMaskDataCap > top)] = top
-    guassianbg= rescale_intensity(gaussian(rawMaskDataCap,sigma=3))
-    
-    level = threshold_otsu(guassianbg)
-    mask1=(guassianbg>=level)*subtraction
+    level = threshold_otsu(guassian_bg)
+    mask1 = (guassian_bg >= level) * subtraction
     
     def background_subtract_wrap(array, mask=mask1):
-        correct=array[0]-mask
+        correct = array[0]-mask
         correct[np.where(correct < 0)] = 0
         return correct[np.newaxis, ...]
     
-    bgcorrect=apply_parallel(background_subtract_wrap,Img, chunks=(1, Img.shape[1],Img.shape[2]), dtype='float')
+    bg_correct = apply_parallel(
+        background_subtract_wrap, image, chunks=(1, image.shape[1], image.shape[2]), dtype='float'
+    )
     
-    return bgcorrect
+    return bg_correct
 
 
 def nlm_denoise(image, patch, dist):
@@ -488,7 +490,7 @@ def remove_large_objects(segments, maxsize):
     Parameters
     ----------
     segments: numpy array of segmentation labels
-    minsize: max pixel size
+    maxsize: max pixel size
  
     Returns
     -------

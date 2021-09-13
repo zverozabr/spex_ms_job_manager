@@ -1,0 +1,20 @@
+{
+"start_params": [
+  {"new_label": [], "description": "Multichannel image as numpy array"},
+  {"maxsize": 0, "description": "maximum pixel size"}
+],
+  "script_path": "remove_large_objects",
+  "return": [
+    {"data": [], "description": "2D label numpy array "}
+  ],
+  "description": "Remove large segmented objects",
+  "depends_and_script": [],
+  "depends_or_script": [
+    "deepcell_cellseg",
+    "stardist_cellseg",
+    "cellpose_cellseg",
+    "classicwastershed_cellseg"
+  ],
+  "name": "remove_large_objects",
+  "stage": "4"
+}

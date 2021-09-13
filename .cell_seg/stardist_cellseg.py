@@ -12,4 +12,4 @@ def run(**kwargs):
 
     stardist_label = sp.stardist_cellseg(median_image, channel_list, scaling, threshold, _min, _max)
 
-    return {'stardist_label': stardist_label}
+    return {'new_label': stardist_label}

@@ -7,4 +7,4 @@ def run(**kwargs):
     new_label = kwargs.get('new_label')
     expanded = sp.simulate_cell(new_label, dist)
 
-    return {'expanded': expanded}
+    return {'new_label': expanded}

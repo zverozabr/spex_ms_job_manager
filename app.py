@@ -202,9 +202,9 @@ def take_start_return_result():
         print("0 task")
 
 
-# if __name__ == '__main__':
-#     load_config()
-#     every(1, take_start_return_result)
+if __name__ == '__main__':
+    load_config()
+    every(1, take_start_return_result)
 
 
 # result = start_scenario(script='segmentation', part='denoise', image_path='2.ome.tiff', channel_list=[0, 2, 3])
@@ -274,23 +274,52 @@ def take_start_return_result():
 # print(params_res)
 
 
-result = start_scenario(
-    script='cell_seg',
-    part='nlm_denoise',
-    and_scripts=['median_denoise', 'background_subtract'],
-    image_path='2.ome.tiff',
-    folder=".cell_seg",
-    channel_list=[0, 2, 3],
-    threshold=0.5,
-    _min=1,
-    _max=98.5,
-    scaling=1,
-    kernal=5,
-    mpp=0.39,
-    ch=0,
-    top=5,
-    subtraction=10,
-    dist=8)
+# result = start_scenario(
+#     script='cell_seg',
+#     part='nlm_denoise',
+#     and_scripts=['median_denoise', 'background_subtract'],
+#     image_path='2.ome.tiff',
+#     folder=".cell_seg",
+#     channel_list=[0, 2, 3],
+#     threshold=0.5,
+#     _min=1,
+#     _max=98.5,
+#     scaling=1,
+#     kernal=5,
+#     mpp=0.39,
+#     ch=0,
+#     top=5,
+#     subtraction=10,
+#     dist=8)
 
-print(result)
+#
+# result = start_scenario(
+#     script='cell_seg',
+#     part='feature_extraction',
+#     subpart=[
+#         'stardist_cellseg',
+#         'median_denoise'
+#     ],
+#     and_scripts=[
+#         'remove_small_objects',
+#         'background_subtract',
+#         'remove_large_objects'
+#     ],
+#     folder='.cell_seg',
+#     image_path='2.ome.tiff',
+#     channel_list=[0, 2, 3],
+#     scaling=1,
+#     kernal=5,
+#     _min=1,
+#     _max=98.5,
+#     threshold=0.5,
+#     mpp=0.39,
+#     ch=0,
+#     top=20,
+#     subtraction=1,
+#     minsize=2,
+#     maxsize=98,
+#     dist=8)
+
+# print(result)
 

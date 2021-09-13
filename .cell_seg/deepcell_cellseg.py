@@ -9,4 +9,4 @@ def run(**kwargs):
 
     deepcell_label = sp.deepcell_segmentation(median_image, channel_list, mpp)
 
-    return {'deepcell_label': deepcell_label}
+    return {'new_label': deepcell_label}
