@@ -4,24 +4,13 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-aicsimageio = "==3.3.4"
-pandas = "==1.2.4"
-matplotlib = "==3.4.3"
-scikit-image = "==0.18.1"
-scikit-learn = "==0.24.2"
-opencv-python = "==4.5.1.48"
-opencv-python-headless = "==4.5.2.54"
-stardist = "==0.6.2"
-tensorflow = "==2.6"
 cellpose = "==0.6.5"
-keras-nightly = "==2.5.0.dev2021032900"
-keras = "==2.6.0"
-mxnet = "==1.6.0"
-deepcell-tracking = {path = "./DeepCell"}
-spex-common = {editable = true, path = "./../common"}
-omero-py = "==5.9.1"
-numpy = "==1.19.3"
-torch = "==1.9.0"
+opencv-python = "==4.5.3.56"
+scikit-image = "==0.18.3"
+scikit-learn = "==0.24.2"
+aicsimageio = "==4.1.0"
+stardist = "==0.7.3"
+mxnet = "==1.8.0.post0"
 
 [dev-packages]
 

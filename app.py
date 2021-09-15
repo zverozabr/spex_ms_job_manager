@@ -11,6 +11,7 @@ from services.Timer import every
 import sys
 import pickle
 
+
 collection = 'tasks'
 
 
@@ -171,9 +172,12 @@ def get_image_from_omero(a_task):
         return path
 
 
-def update_status(status, onetask, result):
+def update_status(status, onetask, result=None):
     search = 'FILTER doc._key == @value LIMIT 1'
-    db_instance().update(collection, {'status': status, 'result': result}, search, value=onetask['id'])
+    data = {'status': status}
+    if result:
+        data.update({'result': result})
+    db_instance().update(collection, data, search, value=onetask['id'])
 
 
 def take_start_return_result():
@@ -204,7 +208,7 @@ def take_start_return_result():
 
 if __name__ == '__main__':
     load_config()
-    every(1, take_start_return_result)
+    every(5, take_start_return_result)
 
 
 # result = start_scenario(script='segmentation', part='denoise', image_path='2.ome.tiff', channel_list=[0, 2, 3])
@@ -320,6 +324,6 @@ if __name__ == '__main__':
 #     minsize=2,
 #     maxsize=98,
 #     dist=8)
-
+#
 # print(result)
 
