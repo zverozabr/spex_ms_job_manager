@@ -8,9 +8,12 @@ cellpose = "==0.6.5"
 opencv-python = "==4.5.3.56"
 scikit-image = "==0.18.3"
 scikit-learn = "==0.24.2"
+mxnet = "*"
+pandas = "*"
+spex-common = {editable = true, path = "../../common"}
+
 aicsimageio = "==4.1.0"
 stardist = "==0.7.3"
-mxnet = "==1.8.0.post0"
 
 [dev-packages]
 
