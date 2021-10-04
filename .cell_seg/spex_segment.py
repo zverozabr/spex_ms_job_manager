@@ -62,7 +62,6 @@ def load_tiff(img,is_mibi=True):
     """
     file=img
     img = AICSImage(img)
-    
     channel_len=max(img.size("STCZ")) #It is assumed that the dimension with largest length has the channels
     order=("S","T","C","Z")
     dim=img.shape
@@ -71,6 +70,7 @@ def load_tiff(img,is_mibi=True):
     for x in range(5):
         if dim[x]==channel_len:
             break
+    x = x -1
     order[x]
     string=str(order[x])
     string+="YX"
@@ -104,6 +104,7 @@ def load_tiff(img,is_mibi=True):
                     #Channel_list.append((description['channel.mass'],description['channel.target']))
     else:
         Channel_list=img.get_channel_names()
+
     
     return ImageTrue, Channel_list
 
@@ -250,8 +251,11 @@ def stardist_cellseg(image, seg_channels, scaling, threshold, _min, _max):
     
     temp2 = np.zeros((image.shape[1], image.shape[2]))
     for i in seg_channels:
-        temp = image[i]
-        temp2 = temp+temp2
+        try:
+            temp = image[i]
+            temp2 = temp+temp2
+        except IndexError:
+            print('oops')
     
     seg_image=temp2
     seg_image = cv2.resize(seg_image, (seg_image.shape[1] * scaling,
@@ -402,8 +406,11 @@ def rescue_cells(image, seg_channels, label_ling):
     """
     temp2 = np.zeros((image.shape[1], image.shape[2]))
     for i in seg_channels:
-        temp = image[i]
-        temp2 = temp+temp2
+        try:
+            temp = image[i]
+            temp2 = temp+temp2
+        except IndexError:
+            print("oops")
 
     seg_image = temp2 / len(seg_channels)
     
@@ -412,7 +419,12 @@ def rescue_cells(image, seg_channels, label_ling):
 
     meanint_cell = np.mean(props['mean_intensity'])
     meansize_cell = np.mean(props['area'])
-
+    if np.isnan(meansize_cell):
+        print("oops")
+        meansize_cell = 0
+    if np.isnan(meanint_cell):
+        print("oops")
+        meanint_cell = 0
     radius = math.floor(math.sqrt(meansize_cell/3.14)*0.5)
     threshold = meanint_cell*0.5
     
@@ -564,13 +576,16 @@ def feature_extraction(img, labels, channel_list):
 
     # Loop through each tiff channel and append mean intensity to dataframe
     for x in range(0, num_channels, 1):
-        
-        image = img[x, :, :]
-        
-        props = regionprops_table(labels, intensity_image=image, properties=['mean_intensity'])
-        data_temp = pd.DataFrame(props)
-        data_temp.columns = [channels[x]]
-        per_cell_data_df = pd.concat([per_cell_data_df, data_temp], axis=1)
+
+        try:
+            image = img[x, :, :]
+
+            props = regionprops_table(labels, intensity_image=image, properties=['mean_intensity'])
+            data_temp = pd.DataFrame(props)
+            data_temp.columns = [channels[x]]
+            per_cell_data_df = pd.concat([per_cell_data_df, data_temp], axis=1)
+        except IndexError:
+            print("oops")
     
     # export and save a .csv file
     # perCellDataDF.to_csv(image+'perCellDataCSV.csv')
