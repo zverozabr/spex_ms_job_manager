@@ -234,17 +234,17 @@ def take_start_return_result():
     a_task = get_task()
     if a_task is not None:
         # download image tiff
-        path = get_image_from_omero(a_task)
+        _path = get_image_from_omero(a_task)
 
-        if path is None:
+        if _path is None:
             update_status(-1, a_task)
             return None
         script_path = getAbsoluteRelative(
-            f'{os.getenv("DATA_STORAGE")}\\Scripts\\{a_task["params"]["script"]}'
+            f'{os.getenv("DATA_STORAGE")}/Scripts/{a_task["params"]["script"]}'
         )
         filename = f"{get_path(a_task['id'], a_task['parent'])}/result.pickle"
-        if os.path.isfile(path):
-            a_task["params"].update(image_path=path)
+        if os.path.isfile(_path):
+            a_task["params"].update(image_path=_path)
             a_task["params"].update(folder=script_path)
             result = start_scenario(**a_task["params"])
             outfile = open(filename, "wb")

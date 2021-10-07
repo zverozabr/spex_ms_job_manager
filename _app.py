@@ -65,6 +65,7 @@ def start_scenario(
 ):
     subpart = subpart if subpart else []
     and_scripts = and_scripts if and_scripts else []
+    print(f"{folder}/{part}.json")
     for file in glob(f"{folder}/{part}.json", recursive=True):
         data = json.load(open(file))
         print('start_scenario', data)
@@ -216,6 +217,7 @@ def get_image_from_omero(a_task):
 
 def get_path(_jobid, _taskid):
     _dir = f'{os.getenv("DATA_STORAGE")}/{str(_jobid)}/{str(_taskid)}'
+    print(_dir)
     if not path.exists(_dir):
         pathlib.Path(_dir).mkdir(parents=True, exist_ok=True)
 
@@ -266,9 +268,11 @@ if __name__ == "__main__":
 a_task = {
     "name": "cel_seg",
     "content": "empty",
+    "id": "88229466",
     "params": {
         "part": "feature_extraction",
         "subpart": [
+            "simulate_cell",
             "stardist_cellseg",
             "median_denoise"
         ],
@@ -309,18 +313,17 @@ a_task = {
 }
 if a_task is not None:
     # download image tiff
-    path = get_image_from_omero(a_task)
-    print(path)
+    _path = get_image_from_omero(a_task)
+    print(_path)
 
-    if path is None:
+    if _path is None:
         update_status(-1, a_task)
-        return None
     script_path = getAbsoluteRelative(
-        f'{os.getenv("DATA_STORAGE")}\\Scripts\\{a_task["params"]["script"]}'
+        f'{os.getenv("DATA_STORAGE")}/Scripts/{a_task["params"]["script"]}'
     )
     filename = f"{get_path(a_task['id'], a_task['parent'])}/result.pickle"
-    if os.path.isfile(path):
-        a_task["params"].update(image_path=path)
+    if os.path.isfile(_path):
+        a_task["params"].update(image_path=_path)
         a_task["params"].update(folder=script_path)
         result = start_scenario(**a_task["params"])
         outfile = open(filename, "wb")
@@ -328,9 +331,9 @@ if a_task is not None:
         outfile.close()
     if os.path.isfile(filename):
         update_status(100, a_task, result=getAbsoluteRelative(filename, False))
-        logger.info("1 task complete")
+        print("1 task complete")
 else:
-    logger.info("0 task")
+    print("0 task")
 
 
 # result = start_scenario(
