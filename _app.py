@@ -67,6 +67,7 @@ def start_scenario(
     and_scripts = and_scripts if and_scripts else []
     for file in glob(f"{folder}/{part}.json", recursive=True):
         data = json.load(open(file))
+        print('start_scenario', data)
 
         if start_depends is True:
             if depends := data.get("depends_and_script"):
@@ -259,8 +260,77 @@ def take_start_return_result():
 
 if __name__ == "__main__":
     load_config()
-every(5, take_start_return_result)
+#every(5, take_start_return_result)
 # take_start_return_result()
+
+a_task = {
+    "name": "cel_seg",
+    "content": "empty",
+    "params": {
+        "part": "feature_extraction",
+        "subpart": [
+            "stardist_cellseg",
+            "median_denoise"
+        ],
+        "and_scripts": [
+            "remove_small_objects",
+            "background_subtract",
+            "remove_large_objects"
+        ],
+        "folder": ".cell_seg",
+        "script": "cell_seg",
+        "image_path": "2.ome.tiff",
+        "channel_list": [
+            0,
+            1,
+            2
+        ],
+        "scaling": 1,
+        "kernal": 5,
+        "_min": 1,
+        "_max": 98,
+        "threshold": 0.5,
+        "mpp": 0.39,
+        "ch": 0,
+        "top": 20,
+        "subtraction": 1,
+        "minsize": 2,
+        "maxsize": 97,
+        "dist": 8
+    },
+    "status": 0,
+    "author": {
+        "login": "root",
+        "id": "201382"
+    },
+    "omeroId": "151",
+    "parent": "88229461",
+    "result": "%DATA_STORAGE%/88229466/88229461/result.pickle"
+}
+if a_task is not None:
+    # download image tiff
+    path = get_image_from_omero(a_task)
+    print(path)
+
+    if path is None:
+        update_status(-1, a_task)
+        return None
+    script_path = getAbsoluteRelative(
+        f'{os.getenv("DATA_STORAGE")}\\Scripts\\{a_task["params"]["script"]}'
+    )
+    filename = f"{get_path(a_task['id'], a_task['parent'])}/result.pickle"
+    if os.path.isfile(path):
+        a_task["params"].update(image_path=path)
+        a_task["params"].update(folder=script_path)
+        result = start_scenario(**a_task["params"])
+        outfile = open(filename, "wb")
+        pickle.dump(result, outfile)
+        outfile.close()
+    if os.path.isfile(filename):
+        update_status(100, a_task, result=getAbsoluteRelative(filename, False))
+        logger.info("1 task complete")
+else:
+    logger.info("0 task")
 
 
 # result = start_scenario(

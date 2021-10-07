@@ -15,8 +15,10 @@ spex-common = {editable = true, path = "../../common"}
 stardist = "==0.7.3"
 python-arango = "*"
 numpy = "==1.19"
-deepcell-tracking = {editable = true, path = "./deepcell"}
 aioredis = "*"
+spektral = {editable = true, path = "./spektral"}
+DeepCell_Tracking = {editable = true, path = "./deepcell-tracking-0.4.5"}
+DeepCell = {editable = true, path = "./DeepCell-CPU-0.10.0"}
 
 [dev-packages]
 
