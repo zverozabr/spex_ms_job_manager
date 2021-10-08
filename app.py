@@ -9,7 +9,6 @@ from spex_common.modules.aioredis import send_event
 from spex_common.models.OmeroImageFileManager import (
     OmeroImageFileManager as FileManager,
 )
-
 from glob import glob
 import json
 import importlib
@@ -19,6 +18,7 @@ from services.Timer import every
 import sys
 import pickle
 
+logger = get_logger(f"spex.ms-job-manager")
 
 collection = "tasks"
 
@@ -46,8 +46,8 @@ def get_script_params(script: str = "", part: str = "", subpart: list = None):
                     _result += get_script_params(
                         script=script, part=item, subpart=subpart
                     )
+        logger.info(f"{script}-{part}")
 
-        print(script, part)
         if params := data.get("start_params"):
             _result += [{part: params}]
 
@@ -93,7 +93,7 @@ def start_scenario(
                         )
                         kwargs.update(res)
 
-        print(script, part)
+        logger.info(f"{script}-{part}")
         params = data.get("start_params")
         for item in params:
             allowed_keys = ["or", "and"]
@@ -230,7 +230,6 @@ def update_status(status, onetask, result=None):
 
 
 def take_start_return_result():
-    logger = get_logger(f"spex.ms-job-manager")
     a_task = get_task()
     if a_task is not None:
         # download image tiff
@@ -384,4 +383,4 @@ every(5, take_start_return_result)
 #     dist=8)
 #
 # print(result)
-#updated
+
