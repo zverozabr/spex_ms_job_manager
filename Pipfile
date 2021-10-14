@@ -19,6 +19,7 @@ aioredis = "*"
 spektral = {editable = true, path = "./spektral"}
 DeepCell_Tracking = {editable = true, path = "./deepcell-tracking-0.4.5"}
 DeepCell = {editable = true, path = "./DeepCell-CPU-0.10.0"}
+tifffile = "*"
 
 [dev-packages]
 

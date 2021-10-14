@@ -1,6 +1,7 @@
 from spex_common.config import load_config
 from spex_common.modules.database import db_instance
 from spex_common.models.Task import task
+from spex_common.models.Job import job
 import spex_common.modules.omeroweb as omeroweb
 import pathlib
 from os import path
@@ -180,27 +181,11 @@ def get_script_structure(folder: str = None):
     return result_data
 
 
-# def get_image_from_omero(a_task):
-#     image_id = a_task["omeroId"]
-#     author = a_task.get("author").get("login")
-#     job_id = a_task.get("parent")
-#     task_id = a_task.get("id")
-#
-#     session = omeroweb.get(author)
-#
-#     if session is not None:
-#         download_url = (
-#             "/webclient/render_image_download/" + str(image_id) + "/?format=tif"
-#         )
-#         path = download_file(download_url, client=session, jobid=job_id, taskid=task_id)
-#         return path
-
-
 def get_image_from_omero(a_task):
     image_id = a_task["omeroId"]
-    path = None
-    File = FileManager(image_id)
-    if not File.exists():
+    _path = None
+    file = FileManager(image_id)
+    if not file.exists():
 
         author = a_task.get("author").get("login")
 
@@ -208,9 +193,9 @@ def get_image_from_omero(a_task):
             "omero/download/image", {"id": image_id, "override": False, "user": author}
         )
     else:
-        path = File.get_filename()
+        _path = file.get_filename()
 
-    return path
+    return _path
 
 
 def get_path(_jobid, _taskid):
@@ -229,26 +214,62 @@ def update_status(status, onetask, result=None):
     db_instance().update(collection, data, search, value=onetask["id"])
 
 
+def enrich_task_data(a_task):
+
+    parent_jobs = db_instance().select(
+        'pipeline_direction',
+        "FILTER doc._to == @value",
+        value=f"jobs/{a_task['parent']}",
+    )
+    if parent_jobs:
+        jobs_ids = [item['_from'].replace('jobs/', '') for item in parent_jobs]
+        tasks = db_instance().select(
+            'tasks',
+            'FILTER doc.parent in @value '
+            'and doc.result != "" '
+            'and doc.result != Null ',
+
+            value=jobs_ids,
+        )
+        data = {}
+        for _task in tasks:
+            filename = getAbsoluteRelative(_task['result'], True)
+            with open(filename, "rb") as outfile:
+                current_file_data = pickle.load(outfile)
+                data = {**data, **current_file_data}
+
+    return data
+
+
 def take_start_return_result():
     a_task = get_task()
     if a_task is not None:
+        a_task["params"] = {**enrich_task_data(a_task), **a_task["params"]}
         # download image tiff
-        _path = get_image_from_omero(a_task)
+        if not a_task["params"].get("image_path"):
+            _path = get_image_from_omero(a_task)
+        else:
+            _path = a_task["params"].get("image_path")
 
         if _path is None:
             update_status(-1, a_task)
             return None
+
         script_path = getAbsoluteRelative(
             f'{os.getenv("DATA_STORAGE")}/Scripts/{a_task["params"]["script"]}'
         )
+
         filename = f"{get_path(a_task['id'], a_task['parent'])}/result.pickle"
         if os.path.isfile(_path):
             a_task["params"].update(image_path=_path)
             a_task["params"].update(folder=script_path)
-            result = start_scenario(**a_task["params"])
-            outfile = open(filename, "wb")
-            pickle.dump(result, outfile)
-            outfile.close()
+            result = start_scenario(**a_task["params"], start_depends=False)
+            if not result:
+                logger.info(f'problems with scenario params {a_task["params"]}')
+            else:
+                outfile = open(filename, "wb")
+                pickle.dump(result, outfile)
+                outfile.close()
         if os.path.isfile(filename):
             update_status(100, a_task, result=getAbsoluteRelative(filename, False))
             logger.info("1 task complete")
@@ -258,9 +279,8 @@ def take_start_return_result():
 
 if __name__ == "__main__":
     load_config()
-every(5, take_start_return_result)
-# take_start_return_result()
-
+# every(5, take_start_return_result)
+take_start_return_result()
 
 # result = start_scenario(
 #     script="segmentation",
