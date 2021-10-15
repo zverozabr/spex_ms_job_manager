@@ -279,8 +279,8 @@ def take_start_return_result():
 
 if __name__ == "__main__":
     load_config()
-# every(5, take_start_return_result)
-take_start_return_result()
+every(5, take_start_return_result)
+# take_start_return_result()
 
 # result = start_scenario(
 #     script="segmentation",
