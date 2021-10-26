@@ -56,13 +56,13 @@ def get_script_params(script: str = "", part: str = "", subpart: list = None):
 
 
 def start_scenario(
-        script: str = "",
-        part: str = "",
-        subpart: list = None,
-        folder: str = "",
-        and_scripts: list = None,
-        start_depends: bool = True,
-        **kwargs,
+    script: str = "",
+    part: str = "",
+    subpart: list = None,
+    folder: str = "",
+    and_scripts: list = None,
+    start_depends: bool = True,
+    **kwargs,
 ):
     subpart = subpart if subpart else []
     and_scripts = and_scripts if and_scripts else []
@@ -217,23 +217,22 @@ def update_status(status, onetask, result=None):
 def enrich_task_data(a_task):
 
     parent_jobs = db_instance().select(
-        'pipeline_direction',
+        "pipeline_direction",
         "FILTER doc._to == @value",
         value=f"jobs/{a_task['parent']}",
     )
     if parent_jobs:
-        jobs_ids = [item['_from'].replace('jobs/', '') for item in parent_jobs]
+        jobs_ids = [item["_from"].replace("jobs/", "") for item in parent_jobs]
         tasks = db_instance().select(
-            'tasks',
-            'FILTER doc.parent in @value '
+            "tasks",
+            "FILTER doc.parent in @value "
             'and doc.result != "" '
-            'and doc.result != Null ',
-
+            "and doc.result != Null ",
             value=jobs_ids,
         )
         data = {}
         for _task in tasks:
-            filename = getAbsoluteRelative(_task['result'], True)
+            filename = getAbsoluteRelative(_task["result"], True)
             with open(filename, "rb") as outfile:
                 current_file_data = pickle.load(outfile)
                 data = {**data, **current_file_data}
@@ -277,16 +276,35 @@ def take_start_return_result():
         logger.info("0 task")
 
 
-# if __name__ == "__main__":
-#     load_config()
+if __name__ == "__main__":
+    load_config()
 # every(5, take_start_return_result)
 # take_start_return_result()
 
 # result = start_scenario(
-#     script="segmentation",
-#     part="denoise",
-#     image_path="2.ome.tiff",
-#     channel_list=[0, 2, 3],
+#     folder='.cell_seg',
+#     image_path='2.ome.tiff',
+#     script=".cell_seg",
+#     subpart=[
+#                 'background_substract',
+#                 'median_denoise',
+#                 'nlm_denoise',
+#             ],
+#     part="stardist_cellseg",
+#     channel_list=[0],
+#     kernal=5,
+#     _min=1,
+#     _max=98.5,
+#     threshold=0.5,
+#     mpp=0.39,
+#     diamtr=20,
+#     ch=0,
+#     top=20,
+#     subtraction=1,
+#     minsize=2,
+#     maxsize=98,
+#     dist=8,
+#     scaling=1
 # )
 
 # result = start_scenario(
@@ -374,33 +392,42 @@ def take_start_return_result():
 #     dist=8)
 
 #
+# result = start_scenario(
+# script='cell_seg',
+# part='feature_extraction',
+# subpart=[
+#     'stardist_cellseg',
+#     'median_denoise'
+# ],
+# and_scripts=[
+#     # 'remove_small_objects',
+#     'background_subtract',
+#     # 'remove_large_objects',
+#     'rescues_cells'
+# ],
+# folder='.cell_seg',
+# image_path='2.ome.tiff',
+# channel_list=[0, 2, 3],
+# scaling=1,
+# kernal=5,
+# _min=1,
+# _max=98.5,
+# threshold=0.5,
+# mpp=0.39,
+# ch=0,
+# top=20,
+# subtraction=1,
+# minsize=2,
+# maxsize=98,
+# dist=8)
+
 result = start_scenario(
-    script='cell_seg',
-    part='feature_extraction',
-    subpart=[
-        'stardist_cellseg',
-        'median_denoise'
-    ],
-    and_scripts=[
-        'remove_small_objects',
-        'background_subtract',
-        'remove_large_objects'
-    ],
-    folder='.cell_seg',
-    image_path='2.ome.tiff',
-    channel_list=[0, 2, 3],
-    scaling=1,
-    kernal=5,
-    _min=1,
-    _max=98.5,
-    threshold=0.5,
-    mpp=0.39,
-    ch=0,
-    top=20,
-    subtraction=1,
-    minsize=2,
-    maxsize=98,
-    dist=8)
+    script="clustering",
+    part="transformation",
+    folder="clustering",
+    fn_in="training.csv",
+    markers=[5, 7, 8, 9, 11, 12, 15, 16, 17, 18, 19, 21, 22, 24, 26, 27],
+)
+
 
 print(result)
-

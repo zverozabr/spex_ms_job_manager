@@ -1,0 +1,11 @@
+{
+"start_params": [
+  {"fn_in": "", "description": "path to data from segmentation"},
+  {"markers": [0,1,2], "description": "path to data from segmentation"}
+],
+"script_path": "transformation",
+"return": [{"training_df": [], "description": "training transformed"}],
+"description": "transform data frame",
+"depends_and_script": [],
+"name": "transformation", "stage": "1"
+}
