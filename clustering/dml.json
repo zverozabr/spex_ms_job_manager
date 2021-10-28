@@ -1,0 +1,14 @@
+{
+"start_params": [
+  {"cluster": [], "description": "clustered array"},
+  {"z_score": [], "description": "z_score array"},
+  {"knn": 0, "description": "30"},
+  {"min_dist": 0.2, "description": "min dist"},
+  {"markers": [0,1,2], "description": "path to data from segmentation"}
+],
+"script_path": "dml",
+"return": [{"training_df": [], "description": "training transformed"}],
+"description": "dml  ",
+"depends_and_script": [],
+"name": "dml", "stage": "4"
+}

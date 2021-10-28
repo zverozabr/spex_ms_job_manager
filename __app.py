@@ -18,6 +18,9 @@ from services.Utils import getAbsoluteRelative
 from services.Timer import every
 import sys
 import pickle
+import csv
+import numpy as np
+
 
 logger = get_logger(f"spex.ms-job-manager")
 
@@ -420,14 +423,46 @@ if __name__ == "__main__":
 # minsize=2,
 # maxsize=98,
 # dist=8)
+if __name__ == '__main__':
 
-result = start_scenario(
-    script="clustering",
-    part="transformation",
-    folder="clustering",
-    fn_in="training.csv",
-    markers=[5, 7, 8, 9, 11, 12, 15, 16, 17, 18, 19, 21, 22, 24, 26, 27],
-)
+    fn_in = "training.csv"
+    with open(fn_in, 'r') as f:
+        reader = csv.reader(f, delimiter=',')
+        headers = next(reader)
+        fn_in = np.array(list(reader)).astype(float)
 
+    result = start_scenario(
+        script="clustering",
+        part="transformation",
+        folder="clustering",
+        fn_in=fn_in,
+        markers=[5, 7, 8, 9, 11, 12, 15, 16, 17, 18, 19, 21, 22, 24, 26, 27],
+    )
 
-print(result)
+    result = start_scenario(
+        script="clustering",
+        part="zscore",
+        folder="clustering",
+        transformed=result['transformed'],
+        markers=result['markers']
+    )
+
+    result = start_scenario(
+        script="clustering",
+        part="cluster",
+        folder="clustering",
+        **result,
+        knn=30,
+        fn_in=fn_in
+    )
+
+    result = start_scenario(
+        script="clustering",
+        part="dml",
+        folder="clustering",
+        min_dist=0.3,
+        **result
+    )
+
+    print(result)
+

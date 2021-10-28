@@ -1,3 +1,6 @@
 {
-  "1": "Transformation"
+  "1": "Transformation",
+  "2": "Z score",
+  "3": "Cluster",
+  "4": "dml"
 }
