@@ -431,36 +431,55 @@ if __name__ == '__main__':
         headers = next(reader)
         fn_in = np.array(list(reader)).astype(float)
 
-    result = start_scenario(
-        script="clustering",
-        part="transformation",
-        folder="clustering",
-        fn_in=fn_in,
-        markers=[5, 7, 8, 9, 11, 12, 15, 16, 17, 18, 19, 21, 22, 24, 26, 27],
-    )
+    # result = start_scenario(
+    #     script="clustering",
+    #     part="transformation",
+    #     folder="clustering",
+    #     fn_in=fn_in,
+    #     markers=[5, 7, 8, 9, 11, 12, 15, 16, 17, 18, 19, 21, 22, 24, 26, 27],
+    # )
+    #
+    # result = start_scenario(
+    #     script="clustering",
+    #     part="zscore",
+    #     folder="clustering",
+    #     transformed=result['transformed'],
+    #     markers=result['markers']
+    # )
+    #
+    # result = start_scenario(
+    #     script="clustering",
+    #     part="cluster",
+    #     folder="clustering",
+    #     **result,
+    #     knn=30,
+    #     fn_in=fn_in
+    # )
+    #
+    # result = start_scenario(
+    #     script="clustering",
+    #     part="dml",
+    #     folder="clustering",
+    #     min_dist=0.3,
+    #     **result
+    # )
+    #
+    # outfile = open('pickle.result', "wb")
+    # pickle.dump(result, outfile)
+    # outfile.close()
+
+    with open('pickle.result', "rb") as outfile:
+        current_file_data = pickle.load(outfile)
+        result = {**current_file_data}
+    print(1)
 
     result = start_scenario(
         script="clustering",
-        part="zscore",
+        part="qfmatch",
         folder="clustering",
-        transformed=result['transformed'],
-        markers=result['markers']
-    )
-
-    result = start_scenario(
-        script="clustering",
-        part="cluster",
-        folder="clustering",
-        **result,
-        knn=30,
-        fn_in=fn_in
-    )
-
-    result = start_scenario(
-        script="clustering",
-        part="dml",
-        folder="clustering",
-        min_dist=0.3,
+        bin_size=30,
+        cluster_id_column=32,
+        x_columns=[30, 31],
         **result
     )
 

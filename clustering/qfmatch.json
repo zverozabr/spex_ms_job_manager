@@ -4,11 +4,15 @@
   {"z_score": [], "description": "z_score array"},
   {"knn": 0, "description": "30"},
   {"min_dist": 0.2, "description": "min dist"},
-  {"markers": [0,1,2], "description": "path to data from segmentation"}
+  {"markers": [0,1,2], "description": "path to data from segmentation"},
+  {"dml": [0,1,2], "description": "dml array"},
+  {"bin_size":  60, "description": "Minimal bin size for binning the mix"},
+  {"cluster_id_column":  32, "description": "_DATA_FILES_CLUSTER_ID_COLUMN"},
+  {"x_columns":  [30,31], "description": "In which columns we have features' values in data files."}
 ],
-"script_path": "dml",
-"return": [{"training_df": [], "description": "training transformed"}],
-"description": "dml  ",
+"script_path": "qfmatch",
+"return": [{"png_data": [], "description": "training transformed"}],
+"description": "qfmatch  ",
 "depends_and_script": [],
-"name": "dml", "stage": "4"
+"name": "qfmatch", "stage": "5"
 }

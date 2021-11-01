@@ -14,10 +14,11 @@ def run(**kwargs):
     #     reader = csv.reader(f, delimiter=',')
     #     headers = next(reader)
     #     data = np.array(list(reader)).astype(float)
-    data = kwargs.get('transformed')
+    data = fn_in
     data_for_calc = data[:, markers]
     data_for_calc = stats.zscore(data_for_calc, axis=0)
     data_for_calc = np.nan_to_num(data_for_calc)
+    data[:, markers] = data_for_calc
     return {
-        'z_score': data_for_calc
+        'z_score': data
     }

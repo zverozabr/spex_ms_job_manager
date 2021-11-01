@@ -70,10 +70,10 @@ def run(**kwargs):
     t2 = time.time()
     print("training umap done ", t2 - t1)
 
-    headers = headers[:-1]
-    headers.append("umap_x")
-    headers.append("umap_y")
-    headers.append("cluster_id")
+    # headers = headers[:-1]
+    # headers.append("umap_x")
+    # headers.append("umap_y")
+    # headers.append("cluster_id")
     result1 = np.column_stack(
         (train_data, mapper.embedding_, train_labels.astype(float))
     )
@@ -86,7 +86,7 @@ def run(**kwargs):
     #     header=",".join(headers),
     #     comments="",
     # )
-    res = {'dml_1': result1}
+    res = {'dml': result1}
 
     print("training done")
 
@@ -123,7 +123,7 @@ def run(**kwargs):
         #     header=",".join(headers),
         #     comments="",
         # )
-        res.update({'dml_2': result2})
+        res.update({f'dml_{i}': result2})
         print("{0} done: {1}, {2}".format(fn_out_test_csv, t1 - t0, t2 - t1))
 
     return res
