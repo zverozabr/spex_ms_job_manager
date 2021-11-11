@@ -6,5 +6,10 @@
 "return": [{"median_image": [], "description": "Denoised image stack as numpy array (C,X,Y)"}],
 "description": "Non local means denoising",
 "depends_and_script": ["load_tiff"],
+  "libs": [
+    "scikit-image==0.18.1",
+    "scikit-learn==0.24.2",
+    "numpy==1.19"
+  ],
 "name": "nlm_denoise", "stage": "2"
 }

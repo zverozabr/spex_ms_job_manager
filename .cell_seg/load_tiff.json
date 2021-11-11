@@ -4,5 +4,6 @@
 "return": [{"median_image": [], "description": "Image opened by ASIImage, and channel array"}],
 "description": "open image",
 "depends_and_script": [],
+  "libs": ["aicsimageio==3.3.7", "json"],
 "name": "load_tiff", "stage": "1"
 }
