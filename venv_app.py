@@ -4,7 +4,7 @@ from spex_common.models.Task import task
 from spex_common.models.Job import job
 import spex_common.modules.omeroweb as omeroweb
 import pathlib
-from os import path
+from os import path, remove
 from spex_common.modules.logging import get_logger
 from spex_common.modules.aioredis import send_event
 from spex_common.models.OmeroImageFileManager import (
@@ -20,6 +20,7 @@ import sys
 import pickle
 import csv
 import numpy as np
+import subprocess
 
 
 logger = get_logger(f"spex.ms-job-manager")
@@ -33,6 +34,40 @@ def scripts_list():
     for script_folder in glob(folder):
         scripts += [os.path.basename(os.path.dirname(script_folder))]
     return scripts
+
+
+def run_subprocess(folder, part, data):
+
+    filename = f'{folder}/{part}.pickle'
+    infile = open(filename, "wb")
+    pickle.dump(data, infile)
+    infile.close()
+
+    command = f".\\{folder}\\{part}\\Scripts\\activate & " \
+              f"python .\\{folder}\\{part}.py"
+
+    ret = subprocess.run(command, capture_output=True, shell=True)
+    logger.info(ret)
+
+    with open(filename, "rb") as outfile:
+        current_file_data = pickle.load(outfile)
+        data = {**data, **current_file_data}
+        outfile.close()
+        remove(filename)
+
+    return data
+
+
+def check_create_install_lib(folder, part, data):
+    if len(glob(f"{folder}/{part}", recursive=True)) == 0:
+
+        command = f"python -m venv {folder}\\{part} & {folder}\\{part}\\Scripts\\activate.bat & "
+        for lib in data['libs']:
+            command += f"pip install {lib} & "
+        command += "echo fin"
+
+        ret = subprocess.run(command, capture_output=True, shell=True)
+        logger.info(ret)
 
 
 def get_script_params(script: str = "", part: str = "", subpart: list = None):
@@ -127,11 +162,12 @@ def start_scenario(
                     raise ValueError(
                         f"Not have all of: {item.get(key_name)} params in script: {script}, in part {part}"
                     )
-        sys.path.append(folder)
-        module = importlib.import_module(data["script_path"])
-        res = module.run(**kwargs)
+        check_create_install_lib(folder, part, data)
 
-        kwargs.update(res)
+
+        # module = importlib.import_module(data["script_path"])
+        # res = module.run(**kwargs)
+        kwargs = run_subprocess(folder, part, kwargs)
 
         if and_scripts:
             stages = get_script_structure(script)
@@ -280,7 +316,15 @@ def take_start_return_result():
 
 
 if __name__ == "__main__":
+
     load_config()
+    result = start_scenario(
+        script="segmentation",
+        part="nlm_denoise",
+        folder=".cell_seg",
+        image_path="2.ome.tiff",
+        channel_list=[0, 2, 3],
+    )
 # every(5, take_start_return_result)
 # take_start_return_result()
 

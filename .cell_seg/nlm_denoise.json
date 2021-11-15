@@ -9,7 +9,8 @@
   "libs": [
     "scikit-image==0.18.1",
     "scikit-learn==0.24.2",
-    "numpy==1.19"
+    "numpy==1.19",
+    "dask"
   ],
 "name": "nlm_denoise", "stage": "2"
 }
