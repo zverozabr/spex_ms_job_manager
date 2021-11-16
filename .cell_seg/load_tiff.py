@@ -1,8 +1,7 @@
 # import spex_segment as sp
 from aicsimageio import AICSImage
 import json
-import pickle
-from os import path as pt
+from service import get, put
 
 
 def load_tiff(img, is_mibi=True):
@@ -70,27 +69,19 @@ def load_tiff(img, is_mibi=True):
     return ImageTrue, Channel_list
 
 
-def run():
+def run(kwargs):
 
-    folder = pt.basename(pt.dirname(__file__))
-    filename = f'./{folder}/{pt.basename(__file__).split(".")[0]}.pickle'
-    with open(filename, "rb") as infile:
-        kwargs = pickle.load(infile)
-        infile.close()
+    image = kwargs.get('image_path')
+    image, channel = load_tiff(image, is_mibi=True)
 
-        image = kwargs.get('image_path')
-        image, channel = load_tiff(image, is_mibi=True)
+    data = {
+         'median_image': image,
+         'channel': channel,
+         'image': image
+     }
 
-        data = {
-             'median_image': image,
-             'channel': channel,
-             'image': image
-         }
-
-        outfile = open(filename, "wb")
-        pickle.dump(data, outfile)
-        outfile.close()
+    put(__file__, data)
 
 
 if __name__ == '__main__':
-    run()
+    run(get(__file__))

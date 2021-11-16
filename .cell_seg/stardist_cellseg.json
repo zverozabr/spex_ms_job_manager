@@ -18,7 +18,14 @@
     "nlm_denoise",
     "background_subtract"
   ],
-
+  "libs": [
+    "stardist==0.7.3",
+    "tensorflow==2.6.0",
+    "csbdeep==0.6.3",
+    "opencv-python==4.5.1.48",
+    "opencv-python-headless==4.5.2.54",
+    "packaging==21.2"
+  ],
   "name": "stardist",
   "stage": "3"
 }

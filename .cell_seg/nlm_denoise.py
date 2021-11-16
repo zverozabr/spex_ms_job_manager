@@ -2,8 +2,7 @@
 import numpy as np
 from skimage.restoration import denoise_nl_means, estimate_sigma
 from skimage.util import apply_parallel
-from os import path as pt
-import pickle
+from service import get, put
 
 
 def nlm_denoise(image, patch, dist):
@@ -49,24 +48,16 @@ def nlm_denoise(image, patch, dist):
 
 
 def run():
-    folder = pt.basename(pt.dirname(__file__))
-    filename = f'./{folder}/{pt.basename(__file__).split(".")[0]}.pickle'
-    if not pt.exists(filename):
-        filename = f'./{pt.basename(__file__).split(".")[0]}.pickle'
-    with open(filename, "rb") as infile:
-        kwargs = pickle.load(infile)
-        infile.close()
 
-        image = kwargs.get('median_image')
-        patch = kwargs.get('patch') or 5
-        dist = kwargs.get('dist') or 6
-        median_image = nlm_denoise(image, patch, dist)
+    kwargs = get(__file__)
+    image = kwargs.get('median_image')
+    patch = kwargs.get('patch') or 5
+    dist = kwargs.get('dist') or 6
+    median_image = nlm_denoise(image, patch, dist)
 
-        data = {'median_image': median_image}
+    data = {'median_image': median_image}
 
-        outfile = open(filename, "wb")
-        pickle.dump(data, outfile)
-        outfile.close()
+    put(__file__, data)
 
 
 if __name__ == '__main__':

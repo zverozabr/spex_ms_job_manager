@@ -53,7 +53,6 @@ def run_subprocess(folder, part, data):
         current_file_data = pickle.load(outfile)
         data = {**data, **current_file_data}
         outfile.close()
-        remove(filename)
 
     return data
 
@@ -61,7 +60,7 @@ def run_subprocess(folder, part, data):
 def check_create_install_lib(folder, part, data):
     if len(glob(f"{folder}/{part}", recursive=True)) == 0:
 
-        command = f"python -m venv {folder}\\{part} & {folder}\\{part}\\Scripts\\activate.bat & "
+        command = f"python -m venv {folder}\\{part} & .\\{folder}\\{part}\\Scripts\\activate & "
         for lib in data['libs']:
             command += f"pip install {lib} & "
         command += "echo fin"
@@ -319,12 +318,32 @@ if __name__ == "__main__":
 
     load_config()
     result = start_scenario(
-        script="segmentation",
-        part="nlm_denoise",
-        folder=".cell_seg",
-        image_path="2.ome.tiff",
-        channel_list=[0, 2, 3],
+        folder='.cell_seg',
+        image_path='2.ome.tiff',
+        script=".cell_seg",
+        subpart=[
+                    'background_substract',
+                    'median_denoise',
+                    'nlm_denoise',
+                ],
+        part="stardist_cellseg",
+        channel_list=[0],
+        kernal=5,
+        _min=1,
+        _max=98.5,
+        threshold=0.5,
+        mpp=0.39,
+        diamtr=20,
+        ch=0,
+        top=20,
+        subtraction=1,
+        minsize=2,
+        maxsize=98,
+        dist=8,
+        scaling=1
     )
+
+
 # every(5, take_start_return_result)
 # take_start_return_result()
 
@@ -467,13 +486,13 @@ if __name__ == "__main__":
 # minsize=2,
 # maxsize=98,
 # dist=8)
-if __name__ == '__main__':
-
-    fn_in = "training.csv"
-    with open(fn_in, 'r') as f:
-        reader = csv.reader(f, delimiter=',')
-        headers = next(reader)
-        fn_in = np.array(list(reader)).astype(float)
+# if __name__ == '__main__':
+#
+#     fn_in = "training.csv"
+#     with open(fn_in, 'r') as f:
+#         reader = csv.reader(f, delimiter=',')
+#         headers = next(reader)
+#         fn_in = np.array(list(reader)).astype(float)
 
     # result = start_scenario(
     #     script="clustering",
@@ -512,20 +531,20 @@ if __name__ == '__main__':
     # pickle.dump(result, outfile)
     # outfile.close()
 
-    with open('pickle.result', "rb") as outfile:
-        current_file_data = pickle.load(outfile)
-        result = {**current_file_data}
-    print(1)
-
-    result = start_scenario(
-        script="clustering",
-        part="qfmatch",
-        folder="clustering",
-        bin_size=30,
-        cluster_id_column=32,
-        x_columns=[30, 31],
-        **result
-    )
-
-    print(result)
+    # with open('pickle.result', "rb") as outfile:
+    #     current_file_data = pickle.load(outfile)
+    #     result = {**current_file_data}
+    # print(1)
+    #
+    # result = start_scenario(
+    #     script="clustering",
+    #     part="qfmatch",
+    #     folder="clustering",
+    #     bin_size=30,
+    #     cluster_id_column=32,
+    #     x_columns=[30, 31],
+    #     **result
+    # )
+    #
+    # print(result)
 

@@ -1,5 +1,5 @@
 Pipfile
 .idea/
-/.cell_seg/**/
+/.cell_seg/*/
 /.cell_seg/nlm_denoise/
 /.cell_seg/load_tiff/

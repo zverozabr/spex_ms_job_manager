@@ -8,5 +8,6 @@
 "return": [{"data": [], "description": "this function return 3d array"}],
 "description": "Remove median noise from img",
 "depends_and_script": ["load_tiff"],
+  "libs": ["scikit-image==0.18.1", "numpy"],
 "name": "denoise", "stage": "2"
 }
