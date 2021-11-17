@@ -6,12 +6,15 @@
 ],
   "script_path": "deepcell_cellseg",
   "return": [{"data": [], "description": "per cell segmentation as numpy array"}],
-  "description": "Segment image by deepcell deeplearning method",
+  "description": "Segment image by deepcell deep learning method",
   "depends_and_script": [],
   "depends_or_script": [
     "median_denoise",
     "nlm_denoise",
     "background_subtract"
+  ],
+  "libs": [
+    "DeepCell==0.9.0"
   ],
   "name": "deepcell_cellseg",
   "stage": "3"

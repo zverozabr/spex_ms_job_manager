@@ -16,6 +16,12 @@
     "nlm_denoise",
     "background_subtract"
   ],
+  "libs": [
+    "opencv-python==4.5.1.48",
+    "opencv-python-headless==4.5.2.54",
+    "cellpose==0.6.5",
+    "numpy==1.20"
+  ],
   "name": "stardist",
   "stage": "3"
 }

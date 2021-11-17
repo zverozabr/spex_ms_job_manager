@@ -1,3 +1,5 @@
+import itertools
+
 from spex_common.config import load_config
 from spex_common.modules.database import db_instance
 from spex_common.models.Task import task
@@ -38,13 +40,14 @@ def scripts_list():
 
 def run_subprocess(folder, part, data):
 
-    filename = f'{folder}/{part}.pickle'
+    filename = f"{folder}/{part}.pickle"
     infile = open(filename, "wb")
     pickle.dump(data, infile)
     infile.close()
 
-    command = f".\\{folder}\\{part}\\Scripts\\activate & " \
-              f"python .\\{folder}\\{part}.py"
+    command = (
+        f".\\{folder}\\{part}\\Scripts\\activate & " f"python .\\{folder}\\{part}.py"
+    )
 
     ret = subprocess.run(command, capture_output=True, shell=True)
     logger.info(ret)
@@ -60,13 +63,51 @@ def run_subprocess(folder, part, data):
 def check_create_install_lib(folder, part, data):
     if len(glob(f"{folder}/{part}", recursive=True)) == 0:
 
-        command = f"python -m venv {folder}\\{part} & .\\{folder}\\{part}\\Scripts\\activate & "
-        for lib in data['libs']:
-            command += f"pip install {lib} & "
+        command = f"python -m venv {folder}\\{part} & .\\{folder}\\{part}\\Scripts\\activate & pip install "
+        for lib in data["libs"]:
+            command += f" {lib} & "
         command += "echo fin"
 
-        ret = subprocess.run(command, capture_output=True, shell=True)
-        logger.info(ret)
+        ret = subprocess.run(
+            command,
+            shell=True,
+            universal_newlines=True,
+            stdout=subprocess.PIPE,
+        )
+        nmap_lines = ret.stdout.splitlines()
+        logger.info(nmap_lines)
+    else:
+
+        command = f".\\{folder}\\{part}\\Scripts\\activate & pip freeze "
+        ret = subprocess.run(
+            command,
+            shell=True,
+            universal_newlines=True,
+            stdout=subprocess.PIPE,
+        )
+        nmap_lines = ret.stdout.splitlines()
+        need_add = []
+        for lib in data["libs"]:
+            not_have = True
+            for installed_lib in nmap_lines:
+                if installed_lib.find(str(lib).lower()) != -1:
+                    not_have = False
+            if not_have:
+                need_add.append(lib)
+        if need_add:
+            command = f".\\{folder}\\{part}\\Scripts\\activate & "
+            for lib in need_add:
+                command += f"pip install {lib} & "
+            command += "pip freeze"
+            ret = subprocess.run(
+                command,
+                shell=True,
+                universal_newlines=True,
+                stdout=subprocess.PIPE,
+            )
+            nmap_lines = ret.stdout.splitlines()
+
+            logger.info(nmap_lines)
 
 
 def get_script_params(script: str = "", part: str = "", subpart: list = None):
@@ -162,7 +203,7 @@ def start_scenario(
                         f"Not have all of: {item.get(key_name)} params in script: {script}, in part {part}"
                     )
         check_create_install_lib(folder, part, data)
-
+        check_create_install_lib(folder, part, data)
 
         # module = importlib.import_module(data["script_path"])
         # res = module.run(**kwargs)
@@ -318,15 +359,15 @@ if __name__ == "__main__":
 
     load_config()
     result = start_scenario(
-        folder='.cell_seg',
-        image_path='2.ome.tiff',
+        folder=".cell_seg",
+        image_path="2.ome.tiff",
         script=".cell_seg",
         subpart=[
-                    'background_substract',
-                    'median_denoise',
-                    'nlm_denoise',
-                ],
-        part="stardist_cellseg",
+            "background_substract",
+            "median_denoise",
+            "nlm_denoise",
+        ],
+        part="deepcell_cellseg",
         channel_list=[0],
         kernal=5,
         _min=1,
@@ -494,57 +535,56 @@ if __name__ == "__main__":
 #         headers = next(reader)
 #         fn_in = np.array(list(reader)).astype(float)
 
-    # result = start_scenario(
-    #     script="clustering",
-    #     part="transformation",
-    #     folder="clustering",
-    #     fn_in=fn_in,
-    #     markers=[5, 7, 8, 9, 11, 12, 15, 16, 17, 18, 19, 21, 22, 24, 26, 27],
-    # )
-    #
-    # result = start_scenario(
-    #     script="clustering",
-    #     part="zscore",
-    #     folder="clustering",
-    #     transformed=result['transformed'],
-    #     markers=result['markers']
-    # )
-    #
-    # result = start_scenario(
-    #     script="clustering",
-    #     part="cluster",
-    #     folder="clustering",
-    #     **result,
-    #     knn=30,
-    #     fn_in=fn_in
-    # )
-    #
-    # result = start_scenario(
-    #     script="clustering",
-    #     part="dml",
-    #     folder="clustering",
-    #     min_dist=0.3,
-    #     **result
-    # )
-    #
-    # outfile = open('pickle.result', "wb")
-    # pickle.dump(result, outfile)
-    # outfile.close()
+# result = start_scenario(
+#     script="clustering",
+#     part="transformation",
+#     folder="clustering",
+#     fn_in=fn_in,
+#     markers=[5, 7, 8, 9, 11, 12, 15, 16, 17, 18, 19, 21, 22, 24, 26, 27],
+# )
+#
+# result = start_scenario(
+#     script="clustering",
+#     part="zscore",
+#     folder="clustering",
+#     transformed=result['transformed'],
+#     markers=result['markers']
+# )
+#
+# result = start_scenario(
+#     script="clustering",
+#     part="cluster",
+#     folder="clustering",
+#     **result,
+#     knn=30,
+#     fn_in=fn_in
+# )
+#
+# result = start_scenario(
+#     script="clustering",
+#     part="dml",
+#     folder="clustering",
+#     min_dist=0.3,
+#     **result
+# )
+#
+# outfile = open('pickle.result', "wb")
+# pickle.dump(result, outfile)
+# outfile.close()
 
-    # with open('pickle.result', "rb") as outfile:
-    #     current_file_data = pickle.load(outfile)
-    #     result = {**current_file_data}
-    # print(1)
-    #
-    # result = start_scenario(
-    #     script="clustering",
-    #     part="qfmatch",
-    #     folder="clustering",
-    #     bin_size=30,
-    #     cluster_id_column=32,
-    #     x_columns=[30, 31],
-    #     **result
-    # )
-    #
-    # print(result)
-
+# with open('pickle.result', "rb") as outfile:
+#     current_file_data = pickle.load(outfile)
+#     result = {**current_file_data}
+# print(1)
+#
+# result = start_scenario(
+#     script="clustering",
+#     part="qfmatch",
+#     folder="clustering",
+#     bin_size=30,
+#     cluster_id_column=32,
+#     x_columns=[30, 31],
+#     **result
+# )
+#
+# print(result)
