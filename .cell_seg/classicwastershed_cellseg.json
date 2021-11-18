@@ -15,5 +15,10 @@
     "background_subtract"
   ],
   "name": "classicwastershed_cellseg",
+  "libs": [
+    "scikit-image==0.18.1",
+    "scikit-learn==0.24.2",
+    "numpy==1.19"
+  ],
   "stage": "3"
 }

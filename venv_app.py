@@ -90,8 +90,12 @@ def check_create_install_lib(folder, part, data):
         for lib in data["libs"]:
             not_have = True
             for installed_lib in nmap_lines:
-                if installed_lib.find(str(lib).lower()) != -1:
+                if (
+                    installed_lib.lower().find(str(lib).lower()) != -1
+                ):
                     not_have = False
+            if str(lib).lower().find("git+htt") > -1:
+                not_have = False
             if not_have:
                 need_add.append(lib)
         if need_add:
@@ -367,7 +371,7 @@ if __name__ == "__main__":
             "median_denoise",
             "nlm_denoise",
         ],
-        part="deepcell_cellseg",
+        part="classicwastershed_cellseg",
         channel_list=[0],
         kernal=5,
         _min=1,
@@ -381,7 +385,7 @@ if __name__ == "__main__":
         minsize=2,
         maxsize=98,
         dist=8,
-        scaling=1
+        scaling=1,
     )
 
 

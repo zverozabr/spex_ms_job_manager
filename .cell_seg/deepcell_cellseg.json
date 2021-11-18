@@ -14,7 +14,10 @@
     "background_subtract"
   ],
   "libs": [
-    "DeepCell==0.9.0"
+    "packaging",
+    "pathlib2",
+    "git+https://github.com/zverozabr/deepcell-tracking.git",
+    "deepcell==0.11.0"
   ],
   "name": "deepcell_cellseg",
   "stage": "3"
