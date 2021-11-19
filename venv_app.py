@@ -23,6 +23,7 @@ import pickle
 import csv
 import numpy as np
 import subprocess
+import pandas
 
 
 logger = get_logger(f"spex.ms-job-manager")
@@ -370,8 +371,11 @@ if __name__ == "__main__":
             "background_substract",
             "median_denoise",
             "nlm_denoise",
+            "classicwastershed_cellseg",
+            "remove_small_objects",
+            "remove_large_objects"
         ],
-        part="classicwastershed_cellseg",
+        part="feature_extraction",
         channel_list=[0],
         kernal=5,
         _min=1,

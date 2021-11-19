@@ -16,5 +16,6 @@
     "classicwastershed_cellseg"
   ],
   "name": "remove_large_objects",
+  "libs": ["numpy==1.19.3"],
   "stage": "4"
 }

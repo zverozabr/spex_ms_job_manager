@@ -19,6 +19,10 @@
     "cellpose_cellseg",
     "classicwastershed_cellseg"
   ],
+  "libs": [
+    "scikit-image==0.18.1",
+    "scikit-learn==0.24.2"
+  ],
   "name": "rescues_cells",
   "stage": "4"
 }

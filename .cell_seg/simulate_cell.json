@@ -7,5 +7,9 @@
 "return": [{"data": [], "description": "2D label numpy array with simulated cells"}],
 "description": "Dilate labels by fixed amount to simulate cells",
 "depends_and_script": ["rescues_cells"],
+  "libs": [
+    "scikit-image==0.18.1",
+    "scikit-learn==0.24.2"
+  ],
 "name": "simulate_cell", "stage": "4"
 }

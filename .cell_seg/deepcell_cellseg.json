@@ -15,8 +15,6 @@
   ],
   "libs": [
     "packaging",
-    "pathlib2",
-    "git+https://github.com/zverozabr/deepcell-tracking.git",
     "deepcell==0.11.0"
   ],
   "name": "deepcell_cellseg",

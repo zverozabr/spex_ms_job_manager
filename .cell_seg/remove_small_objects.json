@@ -15,6 +15,7 @@
     "cellpose_cellseg",
     "classicwastershed_cellseg"
   ],
+  "libs": ["numpy==1.19.3"],
   "name": "remove_small_objects",
   "stage": "4"
 }
