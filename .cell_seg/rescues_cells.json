@@ -1,12 +1,21 @@
 {
-"start_params": [
-  {"image": [], "description": " raw image 2d numpy array"},
-  {"channel_list": [], "description": "list of indices to use for nuclear segmentation IDS(0,2,3)"},
-  {"or":  [
-    {"new_label": [], "description": "numpy array of segmentation labels"}
-  ]}
+  "start_params": [
+    {"image": [], "description": " raw image 2d numpy array"},
+    {"channel_list": [], "description": "list of indices to use for nuclear segmentation IDS(0,2,3)"},
+    {"or":  [
+      {"new_label": [], "description": "numpy array of segmentation labels"}
+    ]}
 
-],
+  ],
+  "params": {
+    "image": [],
+    "channel_list": []
+  },
+  "params_meta": {
+    "image": {"name": "image", "description": " raw image 2d numpy array", "type": "array", "hidden": true },
+    "channel_list": { "name": "channel_list", "description": "list of indices to use for nuclear segmentation IDS(0,2,3)", "type": "channels", "required": true }
+  },
+
   "script_path": "rescues_cells",
   "return": [
     {"data": [], "description": "2D numpy array with added cells"}

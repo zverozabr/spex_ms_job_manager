@@ -1,8 +1,16 @@
 {
-"start_params": [
-  {"median_image": "", "description": "Multichannel image as numpy array"},
-  {"channel_list": [], "description": "list of indices to use for nuclear segmentation IDS(0,2,3)"}
-],
+  "start_params": [
+    {"median_image": "", "description": "Multichannel image as numpy array"},
+    {"channel_list": [], "description": "list of indices to use for nuclear segmentation IDS(0,2,3)"}
+  ],
+  "params": {
+    "median_image": [],
+    "channel_list": []
+  },
+  "params_meta": {
+    "median_image": {"name": "median_image", "description": "Multichannel image as numpy array", "type": "array", "hidden": true },
+    "channel_list": { "name": "channel_list", "description": "list of indices to use for nuclear segmentation IDS(0,2,3)", "type": "channels", "required": true }
+  },
   "script_path": "classicwastershed_cellseg",
   "return": [
     {"data": [], "description": "per cell segmentation as numpy array"}

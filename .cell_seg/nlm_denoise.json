@@ -1,16 +1,25 @@
 {
-"start_params": [
-  {"median_image": "", "description": "Multichannel numpy array (C,X,Y)"}
-],
-"script_path": "nlm_denoise",
-"return": [{"median_image": [], "description": "Denoised image stack as numpy array (C,X,Y)"}],
-"description": "Non local means denoising",
-"depends_and_script": ["load_tiff"],
-  "libs": [
-    "scikit-image==0.18.1",
-    "scikit-learn==0.24.2",
-    "numpy==1.19",
-    "dask"
+  "start_params": [
+    {"median_image": "", "description": "Multichannel numpy array (C,X,Y)"}
   ],
-"name": "nlm_denoise", "stage": "2"
+  "params": {
+    "new_label": [],
+    "maxsize": 0
+  },
+  "params_meta": {
+    "new_label": {"name": "new_label", "description": "Multichannel image as numpy array", "type": "array", "hidden": true },
+    "maxsize": { "name": "maxsize", "description": "maximum pixel size", "type": "int", "required": true }
+  },
+
+  "script_path": "nlm_denoise",
+  "return": [{"median_image": [], "description": "Denoised image stack as numpy array (C,X,Y)"}],
+  "description": "Non local means denoising",
+  "depends_and_script": ["load_tiff"],
+    "libs": [
+      "scikit-image==0.18.1",
+      "scikit-learn==0.24.2",
+      "numpy==1.19",
+      "dask"
+    ],
+  "name": "nlm_denoise", "stage": "2"
 }

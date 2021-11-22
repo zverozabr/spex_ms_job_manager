@@ -1,5 +1,5 @@
 import itertools
-
+from sys import platform
 from spex_common.config import load_config
 from spex_common.modules.database import db_instance
 from spex_common.models.Task import task
@@ -40,6 +40,13 @@ def scripts_list():
 
 
 def run_subprocess(folder, part, data):
+    if platform != 'linux' and platform != 'linux2':
+        activate_venv_str = f".\\{folder}\\{part}\\Scripts\\activate"
+        run_str = f" python .\\{folder}\\{part}.py "
+    else:
+        activate_venv_str = f"source ./{folder}/{part}/bin/activate"
+        run_str = f" python ./{folder}/{part}.py "
+
 
     filename = f"{folder}/{part}.pickle"
     infile = open(filename, "wb")
@@ -47,9 +54,8 @@ def run_subprocess(folder, part, data):
     infile.close()
 
     command = (
-        f".\\{folder}\\{part}\\Scripts\\activate & " f"python .\\{folder}\\{part}.py"
+        f"{activate_venv_str} ; {run_str}"
     )
-
     ret = subprocess.run(command, capture_output=True, shell=True)
     logger.info(ret)
 
@@ -62,13 +68,21 @@ def run_subprocess(folder, part, data):
 
 
 def check_create_install_lib(folder, part, data):
+    if platform != 'linux' and platform != 'linux2':
+        create_venv_str = f"python -m venv {folder}\\{part}"
+        activate_venv_str = f".\\{folder}\\{part}\\Scripts\\activate"
+        pip_install_str = "pip install"
+    else:
+        create_venv_str = f"python3 -m venv ./{folder}/{part}"
+        activate_venv_str = f"source ./{folder}/{part}/bin/activate"
+        pip_install_str = "pip install"
+
     if len(glob(f"{folder}/{part}", recursive=True)) == 0:
 
-        command = f"python -m venv {folder}\\{part} & .\\{folder}\\{part}\\Scripts\\activate & pip install "
+        command = f"{create_venv_str} ; {activate_venv_str} ; {pip_install_str} "
         for lib in data["libs"]:
-            command += f" {lib} & "
-        command += "echo fin"
-
+            command += f" {lib} "
+        print(command)
         ret = subprocess.run(
             command,
             shell=True,
@@ -79,7 +93,7 @@ def check_create_install_lib(folder, part, data):
         logger.info(nmap_lines)
     else:
 
-        command = f".\\{folder}\\{part}\\Scripts\\activate & pip freeze "
+        command = f"{activate_venv_str} ; pip freeze "
         ret = subprocess.run(
             command,
             shell=True,
@@ -100,9 +114,9 @@ def check_create_install_lib(folder, part, data):
             if not_have:
                 need_add.append(lib)
         if need_add:
-            command = f".\\{folder}\\{part}\\Scripts\\activate & "
+            command = f"{activate_venv_str} ; "
             for lib in need_add:
-                command += f"pip install {lib} & "
+                command += f"pip install {lib} ;"
             command += "pip freeze"
             ret = subprocess.run(
                 command,

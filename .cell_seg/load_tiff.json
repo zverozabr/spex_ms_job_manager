@@ -1,9 +1,17 @@
 {
-"start_params": [{"image_path": "", "description": "path to file what we do"}],
-"script_path": "load_tiff",
-"return": [{"median_image": [], "description": "Image opened by ASIImage, and channel array"}],
-"description": "open image",
-"depends_and_script": [],
+  "params": {
+    "omeroIds": [],
+    "image_path": ""
+  },
+  "params_meta": {
+    "omeroIds": { "name": "omeroIds", "description": "Omero Images", "type": "omero", "required": true },
+    "image_path": {"name": "image_path", "description": "path to file what we do", "type": "string", "hidden": true }
+  },
+  "start_params": [{"image_path": "", "description": "path to file what we do"}],
+  "script_path": "load_tiff",
+  "return": [{"median_image": [], "description": "Image opened by ASIImage, and channel array"}],
+  "description": "open image",
+  "depends_and_script": [],
   "libs": ["aicsimageio==3.3.7"],
-"name": "load_tiff", "stage": "1"
+  "name": "load_tiff", "stage": "1"
 }

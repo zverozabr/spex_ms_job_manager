@@ -1,8 +1,17 @@
 {
-"start_params": [
-  {"new_label": [], "description": "Multichannel image as numpy array"},
-  {"minsize": 0, "description": "minimum pixel size"}
-],
+  "start_params": [
+    {"new_label": [], "description": "Multichannel image as numpy array"},
+    {"minsize": 0, "description": "minimum pixel size"}
+  ],
+  "params": {
+    "new_label": [],
+    "minsize": 0
+  },
+  "params_meta": {
+    "new_label": {"name": "new_label", "description": "Multichannel image as numpy array", "type": "array", "hidden": true },
+    "minsize": { "name": "minsize", "description": "minimum pixel size", "type": "int", "required": true }
+  },
+
   "script_path": "remove_small_objects",
   "return": [
     {"data": [], "description": "2D label numpy array "}

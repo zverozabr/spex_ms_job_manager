@@ -1,10 +1,22 @@
 {
-"start_params": [
-  {"median_image": "", "description": "Multichannel image as numpy array"},
-  {"channel_list": [], "description": "list of indices to use for nuclear segmentation IDS(0,2,3)"},
-  {"diamtr": 0, "description": "typical size of nucleus"},
-  {"scaling": 0, "description": "Integer value scaling"}
-],
+  "start_params": [
+    {"median_image": "", "description": "Multichannel image as numpy array"},
+    {"channel_list": [], "description": "list of indices to use for nuclear segmentation IDS(0,2,3)"},
+    {"diamtr": 0, "description": "typical size of nucleus"},
+    {"scaling": 0, "description": "Integer value scaling"}
+  ],
+  "params": {
+    "median_image": [],
+    "channel_list": [],
+    "diamtr": 0,
+    "scaling": 0
+  },
+  "params_meta": {
+    "median_image": {"name": "median_image", "description": "Multichannel image as numpy array", "type": "array", "hidden": true },
+    "channel_list": { "name": "channel_list", "description": "list of indices to use for nuclear segmentation IDS(0,2,3)", "type": "channels", "required": true },
+    "diamtr": { "name": "diamtr", "description": "typical size of nucleus", "type": "int", "required": true },
+    "scaling": { "name": "scaling", "description": "Integer value scaling", "type": "int", "required": true }
+  },
   "script_path": "cellpose_cellseg",
   "return": [
     {"data": [], "description": "per cell segmentation as numpy array"}

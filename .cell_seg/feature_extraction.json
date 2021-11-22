@@ -4,6 +4,17 @@
     {"new_label": [], "description": "2d segmentation label numpy array"},
     {"channel_list": [], "description": "list of indices to use for nuclear segmentation IDS(0,2,3)"}
   ],
+  "params": {
+    "image": [],
+    "new_label": [],
+    "channel_list": []
+  },
+  "params_meta": {
+    "image": {"name": "image", "description": "Multichannel image as numpy array", "type": "array", "hidden": true },
+    "new_label": {"name": "new_label", "description": "2d segmentation label numpy array", "type": "array", "hidden": true },
+    "channel_list": { "name": "channel_list", "description": "list of indices to use for nuclear segmentation IDS(0,2,3)", "type": "channels", "required": true }
+  },
+
   "script_path": "feature_extraction",
   "return": [{"perCellDataDf": [], "description": "Pandas dataframe with cell by expression data"}],
   "description": "Extract per cell expression for all channels",
