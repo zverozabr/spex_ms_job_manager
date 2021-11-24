@@ -226,7 +226,6 @@ def start_scenario(
                         f"Not have all of: {item.get(key_name)} params in script: {script}, in part {part}"
                     )
         check_create_install_lib(folder, part, data)
-        check_create_install_lib(folder, part, data)
 
         # module = importlib.import_module(data["script_path"])
         # res = module.run(**kwargs)
@@ -381,35 +380,35 @@ def take_start_return_result():
 if __name__ == "__main__":
 
     load_config()
-    result = start_scenario(
-        folder=".cell_seg",
-        image_path="2.ome.tiff",
-        script=".cell_seg",
-        subpart=[
-            "background_substract",
-            "median_denoise",
-            "nlm_denoise",
-            "classicwastershed_cellseg",
-            "stardist_cellseg",
-            "remove_small_objects",
-            "remove_large_objects"
-        ],
-        part="feature_extraction",
-        channel_list=[0],
-        kernal=5,
-        _min=1,
-        _max=98.5,
-        threshold=0.5,
-        mpp=0.39,
-        diamtr=20,
-        ch=0,
-        top=20,
-        subtraction=1,
-        minsize=2,
-        maxsize=98,
-        dist=8,
-        scaling=1,
-    )
+    # result = start_scenario(
+    #     folder=".cell_seg",
+    #     image_path="2.ome.tiff",
+    #     script=".cell_seg",
+    #     subpart=[
+    #         "background_substract",
+    #         "median_denoise",
+    #         "nlm_denoise",
+    #         "classicwastershed_cellseg",
+    #         "stardist_cellseg",
+    #         "remove_small_objects",
+    #         "remove_large_objects"
+    #     ],
+    #     part="feature_extraction",
+    #     channel_list=[0],
+    #     kernal=5,
+    #     _min=1,
+    #     _max=98.5,
+    #     threshold=0.5,
+    #     mpp=0.39,
+    #     diamtr=20,
+    #     ch=0,
+    #     top=20,
+    #     subtraction=1,
+    #     minsize=2,
+    #     maxsize=98,
+    #     dist=8,
+    #     scaling=1,
+    # )
 
 
 # every(5, take_start_return_result)
@@ -556,19 +555,20 @@ if __name__ == "__main__":
 # dist=8)
 # if __name__ == '__main__':
 #
-#     fn_in = "training.csv"
-#     with open(fn_in, 'r') as f:
+#     df = "cell_seg_source.csv"
+#     with open(df, 'r') as f:
 #         reader = csv.reader(f, delimiter=',')
 #         headers = next(reader)
-#         fn_in = np.array(list(reader)).astype(float)
-
+#         df = np.array(list(reader)).astype(float)
+#
 # result = start_scenario(
 #     script="clustering",
 #     part="transformation",
 #     folder="clustering",
-#     fn_in=fn_in,
-#     markers=[5, 7, 8, 9, 11, 12, 15, 16, 17, 18, 19, 21, 22, 24, 26, 27],
+#     df=df,
+#     markers=[1, 2, 3, 4],
 # )
+#
 #
 # result = start_scenario(
 #     script="clustering",
@@ -578,13 +578,14 @@ if __name__ == "__main__":
 #     markers=result['markers']
 # )
 #
+#
 # result = start_scenario(
 #     script="clustering",
 #     part="cluster",
 #     folder="clustering",
 #     **result,
 #     knn=30,
-#     fn_in=fn_in
+#     df=df,
 # )
 #
 # result = start_scenario(
@@ -599,19 +600,23 @@ if __name__ == "__main__":
 # pickle.dump(result, outfile)
 # outfile.close()
 
-# with open('pickle.result', "rb") as outfile:
-#     current_file_data = pickle.load(outfile)
-#     result = {**current_file_data}
-# print(1)
-#
-# result = start_scenario(
-#     script="clustering",
-#     part="qfmatch",
-#     folder="clustering",
-#     bin_size=30,
-#     cluster_id_column=32,
-#     x_columns=[30, 31],
-#     **result
-# )
+with open('pickle.result', "rb") as outfile:
+    current_file_data = pickle.load(outfile)
+    result = {**current_file_data}
+
+    result.update(bin_size=30, cluster_id_column=4, x_columns=[1, 2])
+    outfile = open('qfmatch.pickle', "wb")
+    pickle.dump(result, outfile)
+    outfile.close()
+
+result = start_scenario(
+    script="clustering",
+    part="qfmatch",
+    folder="clustering",
+    bin_size=30,
+    cluster_id_column=4,
+    x_columns=[1, 2],
+    **result
+)
 #
 # print(result)

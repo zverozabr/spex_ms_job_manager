@@ -8,5 +8,5 @@
   "description": "cluster for transformed or zscore data ",
   "depends_and_script": [],
   "name": "cluster", "stage": "3",
-  "libs": ["numpy==1.19.3", "phenograph"]
+  "libs": ["numpy==1.20.3", "phenograph==1.5.7"]
 }

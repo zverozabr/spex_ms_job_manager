@@ -1,11 +1,15 @@
 {
-"start_params": [
-  {"transformed": "", "description": "transformed array"},
-  {"markers": [0,1,2], "description": "path to data from segmentation"}
-],
-"script_path": "zscore",
-"return": [{"training_df": [], "description": "training transformed"}],
-"description": "zscore for transformed data ",
-"depends_and_script": [],
-"name": "zscore", "stage": "2"
+  "start_params": [
+    {"transformed": "", "description": "transformed array"},
+    {"markers": [0,1,2], "description": "path to data from segmentation"}
+  ],
+  "script_path": "zscore",
+  "return": [{"training_df": [], "description": "training transformed"}],
+  "description": "zscore for transformed data ",
+  "depends_and_script": [],
+  "name": "zscore", "stage": "2",
+  "libs": [
+    "numpy==1.20.3",
+    "scipy==1.7.1"
+  ]
 }

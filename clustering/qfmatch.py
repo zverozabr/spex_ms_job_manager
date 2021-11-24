@@ -28,11 +28,9 @@ from sklearn import manifold
 import networkx
 from networkx.drawing import nx_agraph
 from scipy.stats import mstats
-
-import os
-
 import csv
 import matplotlib.pyplot as plt
+from service import get, put
 
 
 # SETTINGS.
@@ -2601,4 +2599,4 @@ def run(**kwargs):
 
 
 if __name__ == "__main__":
-    run(None)
+    put(__file__, run(**get(__file__)))

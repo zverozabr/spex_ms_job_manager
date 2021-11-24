@@ -1,5 +1,6 @@
 Pipfile
 .idea/
 /.cell_seg/*/
+/clustering/*/
 /.cell_seg/nlm_denoise/
 /.cell_seg/load_tiff/

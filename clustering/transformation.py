@@ -1,22 +1,21 @@
-import glob
-import os
-import time
-import sys
-
-import csv
+from service import get, put
 import numpy as np
 
 
 def run(**kwargs):
 
-    fn_in = kwargs.get('fn_in')
+    df = kwargs.get('df')
 
     markers = kwargs.get('markers')
 
-    data = fn_in
+    data = df
     data_for_calc = data[:, markers]
     data_for_calc = np.arcsinh(data_for_calc / 5)
     data[:, markers] = data_for_calc
     return {
         'transformed': data
     }
+
+
+if __name__ == "__main__":
+    put(__file__, run(**get(__file__)))

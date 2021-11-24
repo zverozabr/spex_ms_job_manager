@@ -1,15 +1,11 @@
 import glob
 import os
 import time
-import sys
-
 import csv
 import numpy as np
-
 import umap
-import phenograph
-
 import hdbscan
+from service import get, put
 
 
 def run(**kwargs):
@@ -127,3 +123,7 @@ def run(**kwargs):
         print("{0} done: {1}, {2}".format(fn_out_test_csv, t1 - t0, t2 - t1))
 
     return res
+
+
+if __name__ == "__main__":
+    put(__file__, run(**get(__file__)))

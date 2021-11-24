@@ -1,11 +1,12 @@
 import time
 import numpy as np
 import phenograph
+from service import get, put
 
 
 def run(**kwargs):
 
-    fn_in_orig = kwargs.get('fn_in')
+    fn_in_orig = kwargs.get('df')
     if kwargs.get('transformed') is None:
         fn_in = kwargs.get('z_score')
     else:
@@ -37,5 +38,5 @@ def run(**kwargs):
     }
 
 
-if __name__ == '__main__':
-    run()
+if __name__ == "__main__":
+    put(__file__, run(**get(__file__)))

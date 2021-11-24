@@ -1,6 +1,7 @@
 import scipy.stats as stats
 import csv
 import numpy as np
+from service import get, put
 
 
 def run(**kwargs):
@@ -22,3 +23,7 @@ def run(**kwargs):
     return {
         'z_score': data
     }
+
+
+if __name__ == "__main__":
+    put(__file__, run(**get(__file__)))
