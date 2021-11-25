@@ -1,10 +1,12 @@
+import itertools
+from sys import platform
 from spex_common.config import load_config
 from spex_common.modules.database import db_instance
 from spex_common.models.Task import task
 from spex_common.models.Job import job
 import spex_common.modules.omeroweb as omeroweb
 import pathlib
-from os import path
+from os import path, remove
 from spex_common.modules.logging import get_logger
 from spex_common.modules.aioredis import send_event
 from spex_common.models.OmeroImageFileManager import (
@@ -18,6 +20,11 @@ from services.Utils import getAbsoluteRelative
 from services.Timer import every
 import sys
 import pickle
+import csv
+import numpy as np
+import subprocess
+import pandas
+
 
 logger = get_logger(f"spex.ms-job-manager")
 
@@ -30,6 +37,100 @@ def scripts_list():
     for script_folder in glob(folder):
         scripts += [os.path.basename(os.path.dirname(script_folder))]
     return scripts
+
+
+def run_subprocess(folder, part, data):
+    if platform != 'linux' and platform != 'linux2':
+        activate_venv_str = f".\\{folder}\\{part}\\Scripts\\activate.bat"
+        run_str = f" python .\\{folder}\\{part}.py "
+        simb = " & "
+    else:
+        activate_venv_str = f". ./{folder}/{part}/bin/activate"
+        run_str = f" python ./{folder}/{part}.py "
+        simb = " ; "
+
+
+    filename = f"{folder}/{part}.pickle"
+    infile = open(filename, "wb")
+    pickle.dump(data, infile)
+    infile.close()
+
+    command = (
+        f"{activate_venv_str}{simb}{run_str}"
+    )
+    ret = subprocess.run(command, capture_output=True, shell=True)
+    logger.info(ret)
+
+    with open(filename, "rb") as outfile:
+        current_file_data = pickle.load(outfile)
+        data = {**data, **current_file_data}
+        outfile.close()
+
+    return data
+
+
+def check_create_install_lib(folder, part, data):
+    if platform != 'linux' and platform != 'linux2':
+        create_venv_str = f"python -m venv {folder}\\{part}"
+        activate_venv_str = f".\\{folder}\\{part}\\Scripts\\activate"
+        pip_install_str = "pip install"
+        simb = " & "
+    else:
+        create_venv_str = f"python3 -m venv ./{folder}/{part}"
+        activate_venv_str = f". ./{folder}/{part}/bin/activate"
+        pip_install_str = "pip install"
+        simb = " ; "
+
+    if len(glob(f"{folder}/{part}", recursive=True)) == 0:
+
+        command = f"{create_venv_str}{simb}{activate_venv_str}{simb}{pip_install_str} "
+        for lib in data["libs"]:
+            command += f" {lib} "
+
+        ret = subprocess.run(
+            command,
+            shell=True,
+            universal_newlines=True,
+            stdout=subprocess.PIPE,
+        )
+        nmap_lines = ret.stdout.splitlines()
+        logger.info(nmap_lines)
+    else:
+
+        command = f"{activate_venv_str}{simb}pip freeze "
+        ret = subprocess.run(
+            command,
+            shell=True,
+            universal_newlines=True,
+            stdout=subprocess.PIPE,
+        )
+        nmap_lines = ret.stdout.splitlines()
+        need_add = []
+        for lib in data["libs"]:
+            not_have = True
+            for installed_lib in nmap_lines:
+                if (
+                        installed_lib.lower().find(str(lib).lower()) != -1
+                ):
+                    not_have = False
+            if str(lib).lower().find("git+htt") > -1:
+                not_have = False
+            if not_have:
+                need_add.append(lib)
+        if need_add:
+            command = f"{activate_venv_str}{simb}"
+            for lib in need_add:
+                command += f"pip install {lib}{simb}"
+            command += "pip freeze"
+            ret = subprocess.run(
+                command,
+                shell=True,
+                universal_newlines=True,
+                stdout=subprocess.PIPE,
+            )
+            nmap_lines = ret.stdout.splitlines()
+
+            logger.info(nmap_lines)
 
 
 def get_script_params(script: str = "", part: str = "", subpart: list = None):
@@ -56,13 +157,13 @@ def get_script_params(script: str = "", part: str = "", subpart: list = None):
 
 
 def start_scenario(
-    script: str = "",
-    part: str = "",
-    subpart: list = None,
-    folder: str = "",
-    and_scripts: list = None,
-    start_depends: bool = True,
-    **kwargs,
+        script: str = "",
+        part: str = "",
+        subpart: list = None,
+        folder: str = "",
+        and_scripts: list = None,
+        start_depends: bool = True,
+        **kwargs,
 ):
     subpart = subpart if subpart else []
     and_scripts = and_scripts if and_scripts else []
@@ -124,11 +225,11 @@ def start_scenario(
                     raise ValueError(
                         f"Not have all of: {item.get(key_name)} params in script: {script}, in part {part}"
                     )
-        sys.path.append(folder)
-        module = importlib.import_module(data["script_path"])
-        res = module.run(**kwargs)
+        check_create_install_lib(folder, part, data)
 
-        kwargs.update(res)
+        # module = importlib.import_module(data["script_path"])
+        # res = module.run(**kwargs)
+        kwargs = run_subprocess(folder, part, kwargs)
 
         if and_scripts:
             stages = get_script_structure(script)
@@ -217,23 +318,23 @@ def update_status(status, onetask, result=None):
 def enrich_task_data(a_task):
 
     parent_jobs = db_instance().select(
-        'pipeline_direction',
+        "pipeline_direction",
         "FILTER doc._to == @value",
         value=f"jobs/{a_task['parent']}",
     )
+    data = {}
     if parent_jobs:
-        jobs_ids = [item['_from'].replace('jobs/', '') for item in parent_jobs]
+        jobs_ids = [item["_from"].replace("jobs/", "") for item in parent_jobs]
         tasks = db_instance().select(
-            'tasks',
-            'FILTER doc.parent in @value '
+            "tasks",
+            "FILTER doc.parent in @value "
             'and doc.result != "" '
-            'and doc.result != Null ',
-
+            "and doc.result != Null ",
             value=jobs_ids,
         )
-        data = {}
+
         for _task in tasks:
-            filename = getAbsoluteRelative(_task['result'], True)
+            filename = getAbsoluteRelative(_task["result"], True)
             with open(filename, "rb") as outfile:
                 current_file_data = pickle.load(outfile)
                 data = {**data, **current_file_data}
@@ -278,15 +379,67 @@ def take_start_return_result():
 
 
 if __name__ == "__main__":
+
     load_config()
-every(5, take_start_return_result)
+    every(5, take_start_return_result)
+    # result = start_scenario(
+    #     folder=".cell_seg",
+    #     image_path="2.ome.tiff",
+    #     script=".cell_seg",
+    #     subpart=[
+    #         "background_substract",
+    #         "median_denoise",
+    #         "nlm_denoise",
+    #         "classicwastershed_cellseg",
+    #         "stardist_cellseg",
+    #         "remove_small_objects",
+    #         "remove_large_objects"
+    #     ],
+    #     part="feature_extraction",
+    #     channel_list=[0],
+    #     kernal=5,
+    #     _min=1,
+    #     _max=98.5,
+    #     threshold=0.5,
+    #     mpp=0.39,
+    #     diamtr=20,
+    #     ch=0,
+    #     top=20,
+    #     subtraction=1,
+    #     minsize=2,
+    #     maxsize=98,
+    #     dist=8,
+    #     scaling=1,
+    # )
+
+
+# every(5, take_start_return_result)
 # take_start_return_result()
 
 # result = start_scenario(
-#     script="segmentation",
-#     part="denoise",
-#     image_path="2.ome.tiff",
-#     channel_list=[0, 2, 3],
+#     folder='.cell_seg',
+#     image_path='2.ome.tiff',
+#     script=".cell_seg",
+#     subpart=[
+#                 'background_substract',
+#                 'median_denoise',
+#                 'nlm_denoise',
+#             ],
+#     part="stardist_cellseg",
+#     channel_list=[0],
+#     kernal=5,
+#     _min=1,
+#     _max=98.5,
+#     threshold=0.5,
+#     mpp=0.39,
+#     diamtr=20,
+#     ch=0,
+#     top=20,
+#     subtraction=1,
+#     minsize=2,
+#     maxsize=98,
+#     dist=8,
+#     scaling=1
 # )
 
 # result = start_scenario(
@@ -375,32 +528,97 @@ every(5, take_start_return_result)
 
 #
 # result = start_scenario(
-#     script='cell_seg',
-#     part='feature_extraction',
-#     subpart=[
-#         'stardist_cellseg',
-#         'median_denoise'
-#     ],
-#     and_scripts=[
-#         'remove_small_objects',
-#         'background_subtract',
-#         'remove_large_objects'
-#     ],
-#     folder='.cell_seg',
-#     image_path='2.ome.tiff',
-#     channel_list=[0, 2, 3],
-#     scaling=1,
-#     kernal=5,
-#     _min=1,
-#     _max=98.5,
-#     threshold=0.5,
-#     mpp=0.39,
-#     ch=0,
-#     top=20,
-#     subtraction=1,
-#     minsize=2,
-#     maxsize=98,
-#     dist=8)
+# script='cell_seg',
+# part='feature_extraction',
+# subpart=[
+#     'stardist_cellseg',
+#     'median_denoise'
+# ],
+# and_scripts=[
+#     # 'remove_small_objects',
+#     'background_subtract',
+#     # 'remove_large_objects',
+#     'rescues_cells'
+# ],
+# folder='.cell_seg',
+# image_path='2.ome.tiff',
+# channel_list=[0, 2, 3],
+# scaling=1,
+# kernal=5,
+# _min=1,
+# _max=98.5,
+# threshold=0.5,
+# mpp=0.39,
+# ch=0,
+# top=20,
+# subtraction=1,
+# minsize=2,
+# maxsize=98,
+# dist=8)
+# if __name__ == '__main__':
+#
+#     df = "cell_seg_source.csv"
+#     with open(df, 'r') as f:
+#         reader = csv.reader(f, delimiter=',')
+#         headers = next(reader)
+#         df = np.array(list(reader)).astype(float)
+#
+# result = start_scenario(
+#     script="clustering",
+#     part="transformation",
+#     folder="clustering",
+#     df=df,
+#     markers=[1, 2, 3, 4],
+# )
+#
+#
+# result = start_scenario(
+#     script="clustering",
+#     part="zscore",
+#     folder="clustering",
+#     transformed=result['transformed'],
+#     markers=result['markers']
+# )
+#
+#
+# result = start_scenario(
+#     script="clustering",
+#     part="cluster",
+#     folder="clustering",
+#     **result,
+#     knn=30,
+#     df=df,
+# )
+#
+# result = start_scenario(
+#     script="clustering",
+#     part="dml",
+#     folder="clustering",
+#     min_dist=0.3,
+#     **result
+# )
+#
+# outfile = open('pickle.result', "wb")
+# pickle.dump(result, outfile)
+# outfile.close()
+
+# with open('pickle.result', "rb") as outfile:
+#     current_file_data = pickle.load(outfile)
+#     result = {**current_file_data}
+#
+#     result.update(bin_size=30, cluster_id_column=4, x_columns=[1, 2])
+#     outfile = open('qfmatch.pickle', "wb")
+#     pickle.dump(result, outfile)
+#     outfile.close()
+#
+# result = start_scenario(
+#     script="clustering",
+#     part="qfmatch",
+#     folder="clustering",
+#     bin_size=30,
+#     cluster_id_column=4,
+#     x_columns=[1, 2],
+#     **result
+# )
 #
 # print(result)
-

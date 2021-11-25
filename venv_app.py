@@ -380,6 +380,7 @@ def take_start_return_result():
 if __name__ == "__main__":
 
     load_config()
+    every(5, take_start_return_result)
     # result = start_scenario(
     #     folder=".cell_seg",
     #     image_path="2.ome.tiff",
@@ -600,23 +601,23 @@ if __name__ == "__main__":
 # pickle.dump(result, outfile)
 # outfile.close()
 
-with open('pickle.result', "rb") as outfile:
-    current_file_data = pickle.load(outfile)
-    result = {**current_file_data}
-
-    result.update(bin_size=30, cluster_id_column=4, x_columns=[1, 2])
-    outfile = open('qfmatch.pickle', "wb")
-    pickle.dump(result, outfile)
-    outfile.close()
-
-result = start_scenario(
-    script="clustering",
-    part="qfmatch",
-    folder="clustering",
-    bin_size=30,
-    cluster_id_column=4,
-    x_columns=[1, 2],
-    **result
-)
+# with open('pickle.result', "rb") as outfile:
+#     current_file_data = pickle.load(outfile)
+#     result = {**current_file_data}
+#
+#     result.update(bin_size=30, cluster_id_column=4, x_columns=[1, 2])
+#     outfile = open('qfmatch.pickle', "wb")
+#     pickle.dump(result, outfile)
+#     outfile.close()
+#
+# result = start_scenario(
+#     script="clustering",
+#     part="qfmatch",
+#     folder="clustering",
+#     bin_size=30,
+#     cluster_id_column=4,
+#     x_columns=[1, 2],
+#     **result
+# )
 #
 # print(result)
