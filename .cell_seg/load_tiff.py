@@ -69,7 +69,7 @@ def load_tiff(img, is_mibi=True):
     return ImageTrue, Channel_list
 
 
-def run(kwargs):
+def run(**kwargs):
 
     image = kwargs.get('image_path')
     image, channel = load_tiff(image, is_mibi=True)
@@ -80,8 +80,8 @@ def run(kwargs):
          'image': image
      }
 
-    put(__file__, data)
+    return data
 
 
 if __name__ == '__main__':
-    run(get(__file__))
+    put(__file__, run(**get(__file__)))

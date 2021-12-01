@@ -41,14 +41,13 @@ def scripts_list():
 
 def run_subprocess(folder, part, data):
     if platform != 'linux' and platform != 'linux2':
-        activate_venv_str = f".\\{folder}\\{part}\\Scripts\\activate.bat"
-        run_str = f" python .\\{folder}\\{part}.py "
-        simb = " & "
+        activate_venv_str = f"{folder}\\{part}\\Scripts\\activate.bat"
+        run_str = f" python {folder}\\{part}.py "
+        sim = " & "
     else:
-        activate_venv_str = f". ./{folder}/{part}/bin/activate"
-        run_str = f" python ./{folder}/{part}.py "
-        simb = " ; "
-
+        activate_venv_str = f". {folder}/{part}/bin/activate"
+        run_str = f" python {folder}/{part}.py "
+        sim = " ; "
 
     filename = f"{folder}/{part}.pickle"
     infile = open(filename, "wb")
@@ -56,8 +55,9 @@ def run_subprocess(folder, part, data):
     infile.close()
 
     command = (
-        f"{activate_venv_str}{simb}{run_str}"
+        f"{activate_venv_str}{sim}{run_str}"
     )
+    logger.info(command)
     ret = subprocess.run(command, capture_output=True, shell=True)
     logger.info(ret)
 
@@ -72,12 +72,12 @@ def run_subprocess(folder, part, data):
 def check_create_install_lib(folder, part, data):
     if platform != 'linux' and platform != 'linux2':
         create_venv_str = f"python -m venv {folder}\\{part}"
-        activate_venv_str = f".\\{folder}\\{part}\\Scripts\\activate"
+        activate_venv_str = f"{folder}\\{part}\\Scripts\\activate"
         pip_install_str = "pip install"
         simb = " & "
     else:
-        create_venv_str = f"python3 -m venv ./{folder}/{part}"
-        activate_venv_str = f". ./{folder}/{part}/bin/activate"
+        create_venv_str = f"python3 -m venv {folder}/{part}"
+        activate_venv_str = f". {folder}/{part}/bin/activate"
         pip_install_str = "pip install"
         simb = " ; "
 
@@ -86,6 +86,7 @@ def check_create_install_lib(folder, part, data):
         command = f"{create_venv_str}{simb}{activate_venv_str}{simb}{pip_install_str} "
         for lib in data["libs"]:
             command += f" {lib} "
+        logger.info(command)
 
         ret = subprocess.run(
             command,
