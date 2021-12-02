@@ -57,15 +57,15 @@ def median_denoise(image, kernal, ch):
     return f_denoise
 
 
-def run(kwargs):
+def run(**kwargs):
 
     image = kwargs.get('median_image')
-    channel_list = kwargs.get('channel_list')
-    kernal = kwargs.get('kernal')
+    channel_list = kwargs.get('channel_list', [0])
+    kernal = kwargs.get('kernal', 5)
     median_image = median_denoise(image, kernal, channel_list)
 
-    put(__file__, {'median_image': median_image})
+    return {'median_image': median_image}
 
 
 if __name__ == '__main__':
-    run(get(__file__))
+    put(__file__, run(**get(__file__)))
