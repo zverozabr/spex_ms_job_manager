@@ -2,6 +2,7 @@
 from service import get, put
 import numpy as np
 from deepcell.applications import Mesmer
+from decimal import Decimal
 
 
 def deepcell_segmentation(image, seg_channels, mpp):
@@ -40,7 +41,7 @@ def run(**kwargs):
 
     channel_list = kwargs.get('channel_list')
     median_image = kwargs.get('median_image')
-    mpp = kwargs.get('mpp')
+    mpp = Decimal(kwargs.get('mpp'))
 
     deepcell_label = deepcell_segmentation(median_image, channel_list, mpp)
 

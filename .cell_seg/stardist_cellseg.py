@@ -4,6 +4,7 @@ import numpy as np
 from stardist.models import StarDist2D, Config2D
 import cv2
 from csbdeep.utils import normalize
+from decimal import Decimal
 
 
 def stardist_cellseg(image, seg_channels, scaling, threshold, _min, _max):
@@ -60,10 +61,10 @@ def run(**kwargs):
 
     channel_list = kwargs.get('channel_list')
     median_image = kwargs.get('median_image')
-    scaling = kwargs.get('scaling')
-    threshold = kwargs.get('threshold')
-    _min = kwargs.get('_min')
-    _max = kwargs.get('_max')
+    scaling = int(kwargs.get('scaling'))
+    threshold = Decimal(kwargs.get('threshold'))
+    _min = int(kwargs.get('_min'))
+    _max = int(kwargs.get('_max'))
 
     stardist_label = stardist_cellseg(median_image, channel_list, scaling, threshold, _min, _max)
 

@@ -62,6 +62,8 @@ def run(**kwargs):
     image = kwargs.get('median_image')
     channel_list = kwargs.get('channel_list', [0])
     kernal = kwargs.get('kernal', 5)
+    if isinstance(kernal, str):
+        kernal = int(kernal)
     median_image = median_denoise(image, kernal, channel_list)
 
     return {'median_image': median_image}

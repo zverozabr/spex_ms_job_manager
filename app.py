@@ -346,7 +346,7 @@ def enrich_task_data(a_task):
 def take_start_return_result():
     a_task = get_task()
     if a_task is not None:
-        a_task["params"] = {**enrich_task_data(a_task), **a_task["params"]}
+        a_task["params"] = {**a_task["params"], **enrich_task_data(a_task)}
         # download image tiff
         if not a_task["params"].get("image_path"):
             _path = get_image_from_omero(a_task)

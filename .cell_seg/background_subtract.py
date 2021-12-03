@@ -56,10 +56,8 @@ def run(**kwargs):
 
     median_image = background_subtract(image, ch, top, subtraction)
 
-    data = {'median_image': median_image}
-
-    put(__file__, data)
+    return {'median_image': median_image}
 
 
 if __name__ == '__main__':
-    run(**get(__file__))
+    put(__file__, run(**get(__file__)))

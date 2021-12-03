@@ -25,7 +25,7 @@ def simulate_cell(_label, dist):
 
 def run(**kwargs):
 
-    dist = kwargs.get('dist')
+    dist = int(kwargs.get('dist'))
     new_label = kwargs.get('new_label')
     expanded = simulate_cell(new_label, dist)
 

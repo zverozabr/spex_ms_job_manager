@@ -31,7 +31,7 @@ def remove_large_objects(segments, maxsize):
 def run(**kwargs):
 
     new_label = kwargs.get('new_label')
-    maxsize = kwargs.get('maxsize')
+    maxsize = int(kwargs.get('maxsize'))
 
     cellpose_label = remove_large_objects(new_label, maxsize)
 

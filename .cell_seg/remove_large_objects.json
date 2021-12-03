@@ -7,6 +7,14 @@
   "return": [
     {"data": [], "description": "2D label numpy array "}
   ],
+  "params_meta": {
+    "new_label": {"name": "new_label", "description": "Multichannel image as numpy array", "type": "array", "hidden": true },
+    "maxsize": { "name": "maxsize", "description": "maximum pixel size", "type": "int", "required": true }
+  },
+  "params": {
+    "new_label": [],
+    "maxsize": 0
+  },
   "description": "Remove large segmented objects",
   "depends_and_script": [],
   "depends_or_script": [

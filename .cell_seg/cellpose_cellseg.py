@@ -59,8 +59,8 @@ def run(**kwargs):
 
     median_image = kwargs.get('median_image')
     channel_list = kwargs.get('channel_list')
-    scaling = kwargs.get('scaling')
-    diamtr = kwargs.get('diamtr')
+    scaling = int(kwargs.get('scaling'))
+    diamtr = int(kwargs.get('diamtr'))
 
     cellpose_label = cellpose_cellseg(median_image, channel_list, diamtr, scaling)
 
