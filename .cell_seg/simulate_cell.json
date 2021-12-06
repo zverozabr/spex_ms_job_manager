@@ -21,6 +21,7 @@
     "cellpose_cellseg",
     "classicwastershed_cellseg"
   ],
+  "depends_and_script": [],
   "libs": [
     "scikit-image==0.18.1",
     "scikit-learn==0.24.2"

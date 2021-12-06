@@ -51,8 +51,8 @@ def run(**kwargs):
 
     image = kwargs.get('median_image')
     ch = kwargs.get('ch')
-    top = kwargs.get('top')
-    subtraction = kwargs.get('subtraction')
+    top = int(kwargs.get('top'))
+    subtraction = int(kwargs.get('subtraction'))
 
     median_image = background_subtract(image, ch, top, subtraction)
 
