@@ -10,6 +10,7 @@
     {"cluster_id_column":  32, "description": "_DATA_FILES_CLUSTER_ID_COLUMN"},
     {"x_columns":  [30,31], "description": "In which columns we have features' values in data files."}
   ],
+
   "script_path": "qfmatch",
   "return": [{"png_data": [], "description": "training transformed"}],
   "description": "qfmatch  ",

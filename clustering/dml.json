@@ -6,6 +6,42 @@
     {"min_dist": 0.2, "description": "min dist"},
     {"markers": [0,1,2], "description": "path to data from segmentation"}
   ],
+  "params_meta": {
+    "cluster": {
+      "name": "markers",
+      "description": "array of markers",
+      "type": "array",
+      "required": true,
+      "hidden": true
+    },
+    "z_score": {
+      "name": "z_score",
+      "description": "z_score array",
+      "type": "array",
+      "required": true,
+      "hidden": true
+    },
+    "knn": {
+      "name": "knn",
+      "description": "Multichannel numpy array (C,X,Y)",
+      "type": "int",
+      "hidden": false
+    },
+    "min_dist": {
+      "name": "min_dist",
+      "description": "min dist",
+      "type": "float",
+      "required": true,
+      "hidden": true
+    },
+    "markers": {
+      "name": "markers",
+      "description": "array of markers",
+      "type": "array",
+      "required": true,
+      "hidden": false
+    }
+  },
   "script_path": "dml",
   "return": [{"training_df": [], "description": "training transformed"}],
   "description": "dml  ",

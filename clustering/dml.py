@@ -6,6 +6,7 @@ import numpy as np
 import umap
 import hdbscan
 from service import get, put
+from decimal import Decimal
 
 
 def run(**kwargs):
@@ -18,9 +19,9 @@ def run(**kwargs):
     folder_out_test = "testing_dml"
 
     # 30
-    n_neighbors = kwargs.get("knn")
+    n_neighbors = int(kwargs.get("knn"))
     # 0.3
-    min_dist = kwargs.get("min_dist")
+    min_dist = Decimal(kwargs.get("min_dist"))
 
     # 5,7,8,9,11,12,15,16,17,18,19,21,22,24,26,27
     # marker_list = sys.argv[9].split(',')

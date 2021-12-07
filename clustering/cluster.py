@@ -14,7 +14,7 @@ def run(**kwargs):
     fn_out = 'test'
 
     # 30
-    knn = kwargs.get('knn')
+    knn = int(kwargs.get('knn'))
 
     # 5,7,8,9,11,12,15,16,17,18,19,21,22,24,26,27
     markers = kwargs.get('markers')

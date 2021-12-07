@@ -1,12 +1,26 @@
 {
   "start_params": [
     {"transformed": "", "description": "transformed array"},
-    {"markers": [0,1,2], "description": "path to data from segmentation"}
+    {"markers": [0, 1, 2], "description": "path to data from segmentation"}
   ],
+  "params_meta": {
+    "markers": {
+      "name": "markers",
+      "description": "array of markers",
+      "type": "array",
+      "required": true,
+      "hidden": false
+    }
+  },
   "script_path": "cluster",
-  "return": [{"training_df": [], "description": "training transformed"}],
+  "return": [
+    {
+      "training_df": [],
+      "description": "training transformed"}
+  ],
   "description": "cluster for transformed or zscore data ",
   "depends_and_script": [],
-  "name": "cluster", "stage": "3",
+  "name": "cluster",
+  "stage": "3",
   "libs": ["numpy==1.20.3", "phenograph==1.5.7"]
 }

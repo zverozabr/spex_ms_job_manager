@@ -1,8 +1,12 @@
 {
   "start_params": [
     {"df": "", "description": "path to data from segmentation"},
-    {"markers": [0,1,2], "description": "path to data from segmentation"}
+    {"markers": [0,1,2], "description": "channels list"}
   ],
+  "params_meta": {
+    "df": {"name": "df", "description": "Multichannel numpy array (C,X,Y)", "type": "array", "hidden": true },
+    "markers": { "name": "markers", "description": "array of markers", "type": "array", "required": true }
+  },
   "script_path": "transformation",
   "return": [{"training_df": [], "description": "training transformed"}],
   "description": "transform data frame",

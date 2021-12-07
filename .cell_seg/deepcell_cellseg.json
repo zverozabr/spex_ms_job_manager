@@ -1,33 +1,39 @@
 {
-  "start_params": [
-    {"median_image": "", "description": "Multichannel image as numpy array"},
-    {"channel_list": [], "description": "list of indices to use for nuclear segmentation IDS(0,2,3)"},
-    {"mpp": 0, "description": "float, micron per pixel"}
-  ],
-  "params": {
-    "median_image": [],
-    "channel_list": [],
-    "mpp": 0.0
-  },
-  "params_meta": {
-    "median_image": {"name": "median_image", "description": "Multichannel image as numpy array", "type": "array", "hidden": true },
-    "channel_list": { "name": "channel_list", "description": "list of indices to use for nuclear segmentation IDS(0,2,3)", "type": "channels", "required": true },
-    "mpp": { "name": "mpp", "description": "float, micron per pixel", "type": "float", "required": true }
-  },
-
-  "script_path": "deepcell_cellseg",
-  "return": [{"data": [], "description": "per cell segmentation as numpy array"}],
-  "description": "Segment image by deepcell deep learning method",
-  "depends_and_script": [],
-  "depends_or_script": [
-    "median_denoise",
-    "nlm_denoise",
-    "background_subtract"
-  ],
-  "libs": [
-    "packaging",
-    "deepcell==0.11.0"
-  ],
-  "name": "deepcell_cellseg",
-  "stage": "3"
+    "start_params": [
+        {"median_image": "", "description": "Multichannel image as numpy array"},
+        {
+            "channel_list": [],
+            "description": "list of indices to use for nuclear segmentation IDS(0,2,3)"
+        },
+        {"mpp": 0, "description": "float, micron per pixel"}
+    ],
+    "params": {"median_image": [], "channel_list": [], "mpp": 0.0},
+    "params_meta": {
+        "median_image": {
+            "name": "median_image",
+            "description": "Multichannel image as numpy array",
+            "type": "array",
+            "hidden": true
+        },
+        "channel_list": {
+            "name": "channel_list",
+            "description": "list of indices to use for nuclear segmentation IDS(0,2,3)",
+            "type": "channels",
+            "required": true
+        },
+        "mpp": {
+            "name": "mpp",
+            "description": "float, micron per pixel",
+            "type": "float",
+            "required": true
+        }
+    },
+    "script_path": "deepcell_cellseg",
+    "return": [{"data": [], "description": "per cell segmentation as numpy array"}],
+    "description": "Segment image by deepcell deep learning method",
+    "depends_and_script": [],
+    "depends_or_script": ["median_denoise", "nlm_denoise", "background_subtract"],
+    "libs": ["packaging", "deepcell==0.11.0"],
+    "name": "deepcell_cellseg",
+    "stage": "3"
 }
