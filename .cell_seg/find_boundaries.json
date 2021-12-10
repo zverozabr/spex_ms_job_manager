@@ -1,10 +1,13 @@
 {
-"start_params": [
-  {"expanded": [], "description": "Multichannel image as numpy array"}
-],
-"script_path": "find_boundaries",
-"return": [{"contour": [], "description": "array of bool, same shape as label_imgA "}],
-"description": "Return bool array where boundaries between labeled regions are True.",
-"depends_and_script": ["simulate_cell"],
-"name": "find_boundaries", "stage": "6"
+    "start_params": [
+        {"expanded": [], "description": "Multichannel image as numpy array"}
+    ],
+    "script_path": "find_boundaries",
+    "return": [
+        {"contour": [], "description": "array of bool, same shape as label_imgA "}
+    ],
+    "description": "Return bool array where boundaries between labeled regions are True.",
+    "depends_and_script": ["simulate_cell"],
+    "name": "find_boundaries",
+    "stage": "6"
 }
