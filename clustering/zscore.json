@@ -21,7 +21,7 @@
     "script_path": "zscore",
     "return": [{"training_df": [], "description": "training transformed"}],
     "description": "zscore for transformed data ",
-    "depends_and_script": [],
+    "depends_and_script": ["transformation"],
     "name": "zscore",
     "stage": "2",
     "libs": ["numpy==1.20.3", "scipy==1.7.1"]
