@@ -6,7 +6,8 @@ from service import get, put
 
 def run(**kwargs):
 
-    fn_in_orig = kwargs.get('df')
+    fn_in_orig = kwargs.get('df').to_numpy()
+
     if kwargs.get('transformed') is None:
         fn_in = kwargs.get('z_score')
     else:
@@ -18,7 +19,8 @@ def run(**kwargs):
 
     # 5,7,8,9,11,12,15,16,17,18,19,21,22,24,26,27
     markers = kwargs.get('markers')
-
+    if not markers:
+        markers = [1, 2]
     data_orig = fn_in_orig
     data = fn_in
 

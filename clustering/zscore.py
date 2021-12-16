@@ -21,7 +21,8 @@ def run(**kwargs):
     data_for_calc = np.nan_to_num(data_for_calc)
     data[:, markers] = data_for_calc
     return {
-        'z_score': data
+        'z_score': data,
+        'markers': markers
     }
 
 
