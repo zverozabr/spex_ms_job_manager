@@ -566,7 +566,8 @@ def _LoadPointsByClusterId(filename, cust_attrs_to_set=None, **kwargs):
         )
 
     _DATA_FILES_LINE_SEPARATOR = "\n"
-    _DATA_FILES_X_COLUMNS = kwargs.get("x_columns")
+    _DATA_FILES_X_COLUMNS = tuple(kwargs.get("x_columns"))
+
     _DATA_FILES_CLUSTER_ID_COLUMN = kwargs.get("cluster_id_column")
     _COLUMNS_SEPARATOR_REGEX = r","
     return DataLoader(

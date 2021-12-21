@@ -21,12 +21,14 @@ def run(**kwargs):
     # 30
     n_neighbors = int(kwargs.get("knn"))
     # 0.3
-    min_dist = Decimal(kwargs.get("min_dist"))
+    min_dist = float(kwargs.get("min_dist"))
 
     # 5,7,8,9,11,12,15,16,17,18,19,21,22,24,26,27
     # marker_list = sys.argv[9].split(',')
     # markers = [int(x) for x in marker_list]
     markers = kwargs.get("markers")
+    if not markers:
+        markers = [1, 2]
 
     print(fn_in_train)
     print(fn_in_train_zscore)
