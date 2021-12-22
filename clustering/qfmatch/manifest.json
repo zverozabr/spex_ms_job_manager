@@ -65,7 +65,7 @@
       "description": "training transformed"
     }
   ],
-  "depends_and_script": [],
+  "depends_and_script": ["dml"],
   "libs": [
     "matplotlib==3.4.3",
     "umap-learn==0.5.1",
