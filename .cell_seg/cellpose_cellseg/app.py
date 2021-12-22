@@ -10,7 +10,7 @@ def cellpose_cellseg(img, seg_channels, diamtr, scaling):
 
     Parameters
     ----------
-    image : Multichannel image as numpy array
+    img : Multichannel image as numpy array
     seg_channels: list of indices to use for nuclear segmentation
     diamtr: typical size of nucleus
     scaling: Integer value scaling

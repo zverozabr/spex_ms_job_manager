@@ -129,14 +129,9 @@ def check_create_install_lib(script, part, libs):
 def start_scenario(
     script: str = "",
     part: str = "",
-    subpart: list = None,
     folder: str = "",
-    and_scripts: list = None,
     **kwargs,
 ):
-    subpart = subpart if isinstance(subpart, list) else []
-    and_scripts = and_scripts if isinstance(and_scripts, list) else []
-
     manifest = os.path.join(folder, part, 'manifest.json')
 
     if not os.path.isfile(manifest):
@@ -156,27 +151,7 @@ def start_scenario(
 
     check_create_install_lib(script, part, data.get("libs", []))
 
-    kwargs = run_subprocess(folder, script, part, kwargs)
-
-    if and_scripts:
-        stages = get_script_structure(script)
-        for _script in and_scripts:
-            cur_stage = data.get("stage")
-            if item := [
-                element
-                for element in stages.get(cur_stage)
-                if element["script_path"] == _script
-            ]:
-                res = start_scenario(
-                    script=script,
-                    part=_script,
-                    subpart=subpart,
-                    folder=folder,
-                    **kwargs,
-                )
-                kwargs.update(res)
-
-    return kwargs
+    return run_subprocess(folder, script, part, kwargs)
 
 
 def get_task():
