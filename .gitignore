@@ -1,6 +1,4 @@
 .idea/
-/.cell_seg/*/
-/clustering/*/
 *.egg-info/
 /__pycache__/
 /tmp/

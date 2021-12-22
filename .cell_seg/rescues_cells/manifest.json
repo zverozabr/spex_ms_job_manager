@@ -1,0 +1,46 @@
+{
+  "description": "Rescue/Segment cells that deep learning approach may have missed",
+  "name": "rescues_cells",
+  "stage": "4",
+  "params": {
+    "image": {
+      "name": "image",
+      "description": " raw image 2d numpy array",
+      "type": "array",
+      "hidden": true,
+      "default": []
+    },
+    "new_label": {
+      "name": "new_label",
+      "description": "numpy array of segmentation labels",
+      "type": "array",
+      "hidden": true,
+      "default": []
+    },
+    "channel_list": {
+      "name": "channel_list",
+      "description": "list of indices to use for nuclear segmentation IDS(0,2,3)",
+      "type": "channels",
+      "required": true,
+      "default": []
+    }
+  },
+  "script_path": "rescues_cells",
+  "return": [
+    {
+      "new_label": [],
+      "description": "2D numpy array with added cells"
+    }
+  ],
+  "depends_and_script": [],
+  "depends_or_script": [
+    "deepcell_cellseg",
+    "stardist_cellseg",
+    "cellpose_cellseg",
+    "classicwastershed_cellseg"
+  ],
+  "libs": [
+    "scikit-image==0.18.1",
+    "scikit-learn==0.24.2"
+  ]
+}
