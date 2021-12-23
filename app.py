@@ -12,17 +12,16 @@ from spex_common.modules.aioredis import send_event
 from spex_common.models.OmeroImageFileManager import (
     OmeroImageFileManager as FileManager,
 )
-from spex_common.services.Utils import getAbsoluteRelative
+from spex_common.services.Utils import getAbsoluteRelative, first_or_none
 from spex_common.services.Timer import every
-from spex_common.services.Script import get_script_structure
 
-logger = get_logger("spex.ms-job-manager")
+logger = get_logger('spex.ms-job-manager')
 
-collection = "tasks"
+collection = 'tasks'
 
 
 def get_platform_venv_params(script, part):
-    env_path = os.getenv("SCRIPTS_ENVS_PATH", '~/scripts_envs')
+    env_path = os.getenv('SCRIPTS_ENVS_PATH', '~/scripts_envs')
 
     script_copy_path = os.path.join(env_path, 'scripts', script, part)
     os.makedirs(script_copy_path, exist_ok=True)
@@ -36,7 +35,7 @@ def get_platform_venv_params(script, part):
     executor = f'python' if not_posix else f'python3'
     create_venv = f'{executor} -m venv {env_path}'
 
-    activate_venv = f"source {os.path.join(env_path, 'bin', 'activate')}"
+    activate_venv = f'source {os.path.join(env_path, "bin", "activate")}'
     if not_posix:
         activate_venv = os.path.join(env_path, 'Scripts', 'activate.bat')
 
@@ -83,7 +82,7 @@ def run_subprocess(folder, script, part, data):
         logger.error(process.stderr)
         logger.debug(process.stdout)
 
-        with open(filename, "rb") as outfile:
+        with open(filename, 'rb') as outfile:
             result_data = pickle.load(outfile)
             return {**data, **result_data}
     finally:
@@ -96,7 +95,7 @@ def check_create_install_lib(script, part, libs):
 
     params = get_platform_venv_params(script, part)
 
-    install_libs = f"pip install {' '.join(libs)}"
+    install_libs = f'pip install {" ".join(libs)}'
 
     if not os.path.isdir(params['env_path']):
         command = params['create_venv']
@@ -127,9 +126,9 @@ def check_create_install_lib(script, part, libs):
 
 
 def start_scenario(
-    script: str = "",
-    part: str = "",
-    folder: str = "",
+    script: str = '',
+    part: str = '',
+    folder: str = '',
     **kwargs,
 ):
     manifest = os.path.join(folder, part, 'manifest.json')
@@ -143,13 +142,13 @@ def start_scenario(
     if not data:
         return None
 
-    logger.info(f"{script}-{part}")
-    params = data.get("params")
+    logger.info(f'{script}-{part}')
+    params = data.get('params')
     for key, item in params.items():
         if kwargs.get(key) is None:
-            raise ValueError(f"Not have param '{key}' in script: {script}, in part {part}")
+            raise ValueError(f'Not have param "{key}" in script: {script}, in part {part}')
 
-    check_create_install_lib(script, part, data.get("libs", []))
+    check_create_install_lib(script, part, data.get('libs', []))
 
     return run_subprocess(folder, script, part, kwargs)
 
@@ -157,37 +156,41 @@ def start_scenario(
 def get_task():
     tasks = db_instance().select(
         collection,
-        "FILTER doc.status == 0 or doc.status == -1 and doc.content like @value "
-        "LIMIT 1 ",
-        value="%empty%",
+        'FILTER doc.status == 0 or doc.status == -1 and doc.content like @value '
+        'LIMIT 1 ',
+        value='%empty%',
     )
+
+    def to_json(item):
+        return task(item).to_json()
+
     if len(tasks) == 1:
-        return task(tasks[0]).to_json()
-    else:
-        tasks = db_instance().select(collection, " FILTER doc.status == 0 LIMIT 1  ")
-        return task(tasks[0]).to_json() if len(tasks) == 1 else None
+        return first_or_none(tasks, to_json)
+
+    tasks = db_instance().select(collection, ' FILTER doc.status == 0 LIMIT 1 ')
+    return first_or_none(tasks, to_json)
 
 
 def get_image_from_omero(a_task) -> str or None:
-    image_id = a_task["omeroId"]
+    image_id = a_task['omeroId']
     file = FileManager(image_id)
     if file.exists():
         return file.get_filename()
 
-    author = a_task.get("author").get("login")
+    author = a_task.get('author').get('login')
     send_event(
-        "omero/download/image",
+        'omero/download/image',
         {
-            "id": image_id,
-            "override": False,
-            "user": author
+            'id': image_id,
+            'override': False,
+            'user': author
         }
     )
     return None
 
 
 def get_path(job_id, task_id):
-    path = os.path.join(os.getenv("DATA_STORAGE"), 'jobs', job_id, task_id)
+    path = os.path.join(os.getenv('DATA_STORAGE'), 'jobs', job_id, task_id)
     if not os.path.isdir(path):
         os.makedirs(path, exist_ok=True)
 
@@ -195,41 +198,38 @@ def get_path(job_id, task_id):
 
 
 def update_status(status, a_task, result=None):
-    search = "FILTER doc._key == @value LIMIT 1"
-    data = {"status": status}
+    search = 'FILTER doc._key == @value LIMIT 1'
+    data = {'status': status}
     if result:
-        data.update({"result": result})
-    db_instance().update(collection, data, search, value=a_task["id"])
+        data.update(result=result)
+    db_instance().update(collection, data, search, value=a_task['id'])
 
 
 def enrich_task_data(a_task):
     parent_jobs = db_instance().select(
-        "pipeline_direction",
-        "FILTER doc._to == @value",
-        value=f"jobs/{a_task['parent']}",
+        'pipeline_direction',
+        'FILTER doc._to == @value',
+        value=f'jobs/{a_task["parent"]}',
     )
 
     if not parent_jobs:
         return {}
 
     data = {}
-    jobs_ids = [item["_from"][5:] for item in parent_jobs]
+    jobs_ids = [item['_from'][5:] for item in parent_jobs]
     tasks = db_instance().select(
-        "tasks",
-        "FILTER doc.parent in @value "
-        'and doc.result != "" '
-        "and doc.result != Null ",
+        'tasks',
+        'FILTER doc.parent in @value '
+        'and doc.result != '' '
+        'and doc.result != Null ',
         value=jobs_ids,
     )
 
     for item in tasks:
-        filename = getAbsoluteRelative(item["result"], True)
-        with open(filename, "rb") as outfile:
+        filename = getAbsoluteRelative(item['result'], True)
+        with open(filename, 'rb') as outfile:
             current_file_data = pickle.load(outfile)
-            data = {
-                **data,
-                **current_file_data
-            }
+            data = {**data, **current_file_data}
 
     return data
 
@@ -237,28 +237,31 @@ def enrich_task_data(a_task):
 def take_start_return_result():
     a_task = get_task()
     if a_task is None:
-        logger.info("0 task")
+        logger.info('0 task')
+        return None
 
-    a_task["params"] = {
-        **a_task["params"],
+    a_task['params'] = {
+        **a_task['params'],
         **enrich_task_data(a_task)
     }
 
     # download image tiff
-    if not a_task["params"].get("image_path"):
+    if not a_task['params'].get('image_path'):
         path = get_image_from_omero(a_task)
     else:
-        path = a_task["params"].get("image_path")
+        path = a_task['params'].get('image_path')
 
     if path is None:
         update_status(-1, a_task)
         return None
 
-    script_path = getAbsoluteRelative(os.path.join(
-        os.getenv("DATA_STORAGE"),
-        'Scripts',
-        f'{a_task["params"]["script"]}'
-    ))
+    script_path = getAbsoluteRelative(
+        os.path.join(
+            os.getenv('DATA_STORAGE'),
+            'Scripts',
+            f'{a_task["params"]["script"]}'
+        )
+    )
 
     filename = os.path.join(
         get_path(a_task['id'], a_task['parent']),
@@ -266,24 +269,21 @@ def take_start_return_result():
     )
 
     if os.path.isfile(path):
-        a_task["params"].update(
-            image_path=path,
-            folder=script_path
-        )
+        a_task['params'].update(image_path=path, folder=script_path)
 
-        result = start_scenario(**a_task["params"])
+        result = start_scenario(**a_task['params'])
 
         if not result:
             logger.info(f'problems with scenario params {a_task["params"]}')
         else:
-            with open(filename, "wb") as outfile:
+            with open(filename, 'wb') as outfile:
                 pickle.dump(result, outfile)
 
     if os.path.isfile(filename):
         update_status(100, a_task, result=getAbsoluteRelative(filename, False))
-        logger.info("1 task complete")
+        logger.info('1 task complete')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     load_config()
     every(5, take_start_return_result)
