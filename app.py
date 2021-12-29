@@ -156,8 +156,7 @@ def start_scenario(
 def get_task():
     tasks = db_instance().select(
         collection,
-        'FILTER doc.status == 0 or doc.status == -1 and doc.content like @value '
-        'LIMIT 1 ',
+        'FILTER doc.status == 0 or doc.status == -1 and doc.content like @value LIMIT 1',
         value='%empty%',
     )
 
@@ -205,6 +204,10 @@ def update_status(status, a_task, result=None):
     db_instance().update(collection, data, search, value=a_task['id'])
 
 
+def get_key_parent(item):
+    return item['parent']
+
+
 def enrich_task_data(a_task):
     parent_jobs = db_instance().select(
         'pipeline_direction',
@@ -219,17 +222,20 @@ def enrich_task_data(a_task):
     jobs_ids = [item['_from'][5:] for item in parent_jobs]
     tasks = db_instance().select(
         'tasks',
-        'FILTER doc.parent in @value '
-        'and doc.result != '' '
-        'and doc.result != Null ',
+        'FILTER doc.parent in @value and doc.result != "" and doc.result != Null',
         value=jobs_ids,
     )
+
+    tasks.sort(key=get_key_parent)
 
     for item in tasks:
         filename = getAbsoluteRelative(item['result'], True)
         with open(filename, 'rb') as outfile:
             current_file_data = pickle.load(outfile)
-            data = {**data, **current_file_data}
+            data = {
+                **data,
+                **current_file_data
+            }
 
     return data
 
@@ -241,8 +247,8 @@ def take_start_return_result():
         return None
 
     a_task['params'] = {
+        **enrich_task_data(a_task),
         **a_task['params'],
-        **enrich_task_data(a_task)
     }
 
     # download image tiff
