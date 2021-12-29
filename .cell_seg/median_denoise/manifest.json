@@ -1,5 +1,5 @@
 {
-  "name": "denoise",
+  "name": "median_denoise",
   "description": "Remove median noise from img",
   "stage": "2",
   "params": {

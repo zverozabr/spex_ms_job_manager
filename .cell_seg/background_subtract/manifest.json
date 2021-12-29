@@ -13,7 +13,7 @@
     "ch": {
       "name": "ch",
       "description": "Index of background channel",
-      "type": "int",
+      "type": "channel",
       "required": true,
       "default": 0
     },
