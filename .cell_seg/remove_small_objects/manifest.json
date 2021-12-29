@@ -1,0 +1,38 @@
+{
+  "name": "remove_small_objects",
+  "description": "Remove small segmented objects",
+  "stage": "4",
+  "params": {
+    "new_label": {
+      "name": "new_label",
+      "description": "Multichannel image as numpy array",
+      "type": "array",
+      "hidden": true,
+      "default": []
+    },
+    "minsize": {
+      "name": "minsize",
+      "description": "minimum pixel size",
+      "type": "int",
+      "required": true,
+      "default": 0
+    }
+  },
+  "script_path": "remove_small_objects",
+  "return": [
+    {
+      "data": [],
+      "description": "2D label numpy array "
+    }
+  ],
+  "depends_and_script": [],
+  "depends_or_script": [
+    "deepcell_cellseg",
+    "stardist_cellseg",
+    "cellpose_cellseg",
+    "classicwastershed_cellseg"
+  ],
+  "libs": [
+    "numpy==1.19.3"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Clustering",
+  "description": "",
+  "stages": [
+    "Transformation",
+    "Z score",
+    "Cluster",
+    "dml",
+    "qfmatch"
+  ]
+}

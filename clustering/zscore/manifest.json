@@ -1,0 +1,37 @@
+{
+  "name": "zscore",
+  "description": "zscore for transformed data ",
+  "stage": "2",
+  "params": {
+    "transformed": {
+      "name": "transformed",
+      "description": "Multichannel numpy array (C,X,Y)",
+      "type": "array",
+      "hidden": true,
+      "default": []
+    },
+    "markers": {
+      "name": "markers",
+      "description": "array of markers",
+      "type": "array",
+      "required": true,
+      "hidden": true,
+      "default": []
+    }
+  },
+  "script_path": "zscore",
+  "return": [
+    {
+      "training_df": [],
+      "description": "training transformed"
+    }
+  ],
+  "depends_and_script": [
+    "transformation"
+  ],
+  "libs": [
+    "numpy==1.20.3",
+    "scipy==1.7.1",
+    "pandas==1.3.4"
+  ]
+}

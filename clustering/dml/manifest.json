@@ -1,0 +1,30 @@
+{
+  "name": "dml",
+  "description": "dml",
+  "stage": "4",
+  "params": {
+    "min_dist": {
+      "name": "min_dist",
+      "description": "min dist",
+      "type": "float",
+      "required": true,
+      "default": 0.2
+    }
+  },
+  "script_path": "dml",
+  "return": [
+    {
+      "training_df": [],
+      "description": "training transformed"
+    }
+  ],
+  "depends_and_script": [
+    "cluster"
+  ],
+  "libs": [
+    "umap-learn==0.5.1",
+    "numpy==1.20.3",
+    "hdbscan==0.8.27",
+    "pandas==1.3.4"
+  ]
+}

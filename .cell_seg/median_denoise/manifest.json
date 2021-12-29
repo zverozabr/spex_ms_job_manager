@@ -1,0 +1,43 @@
+{
+  "name": "median_denoise",
+  "description": "Remove median noise from img",
+  "stage": "2",
+  "params": {
+    "median_image": {
+      "name": "median_image",
+      "description": "Multichannel numpy array (C,X,Y)",
+      "type": "array",
+      "hidden": true,
+      "default": []
+    },
+    "kernel": {
+      "name": "kernel",
+      "description": "int, 5-7 is a typical range",
+      "type": "int",
+      "required": true,
+      "default": 0
+    },
+    "channel_list": {
+      "name": "channel_list",
+      "description": "list of channels IDS(0,2,3)",
+      "type": "channels",
+      "required": true,
+      "default": []
+    }
+  },
+  "script_path": "median_denoise",
+  "return": [
+    {
+      "median_image": [],
+      "description": "this function return 3d array"
+    }
+  ],
+  "depends_and_script": [
+    "load_tiff"
+  ],
+  "libs": [
+    "scikit-image==0.18.1",
+    "scikit-learn==0.24.2",
+    "dask==2021.11.1"
+  ]
+}

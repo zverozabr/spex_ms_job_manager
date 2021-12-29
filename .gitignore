@@ -1,0 +1,14 @@
+.idea/
+*.egg-info/
+/__pycache__/
+/tmp/
+*.local
+.vscode
+*.pyc
+*.pyo
+*.iml
+*.ipr
+*.iws
+*.tiff
+*.tif
+*.pickle
