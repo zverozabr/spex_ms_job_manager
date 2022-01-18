@@ -69,10 +69,8 @@ def check_create_install_lib(script, part, libs):
         )
         logger.debug(process.stdout.splitlines())
 
-    command = f"""
-{params['activate_venv']}
-{install_libs}
-"""
+    command = f"{params['activate_venv']} && {install_libs}"
+
     logger.info(command)
 
     process = subprocess.run(
@@ -102,13 +100,15 @@ def run_subprocess(folder, script, part, data):
     params = get_platform_venv_params(script, part)
 
     script_path = os.path.join(params["script_copy_path"], str(uuid.uuid4()))
-    os.makedirs(script_path, exist_ok=True)
+    # os.makedirs(script_path, exist_ok=True)
 
     try:
-        shutil.copytree(os.path.join(folder, script), script_path)
+        # shutil.copytree(os.path.join(folder, part), script_path)
+        shutil.copytree(os.path.join(folder, part), script_path)
+        # shutil.copytree(folder, script_path)
         runner_path = os.path.join(script_path, "__runner__.py")
         shutil.copyfile(
-            os.path.join(os.path.dirname(__file__), "runner.py"),
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), "runner.py"),
             runner_path,
         )
 
@@ -116,10 +116,7 @@ def run_subprocess(folder, script, part, data):
         with open(filename, "wb") as infile:
             pickle.dump(data, infile)
 
-        command = f"""
-{params['activate_venv']}
-{params['executor']} {runner_path}
-"""
+        command = f"{params['activate_venv']} && {params['executor']} {runner_path}"
         logger.info(command)
 
         process = subprocess.run(
@@ -129,8 +126,10 @@ def run_subprocess(folder, script, part, data):
             capture_output=True,
             text=True,
         )
-        logger.error(process.stderr)
-        logger.debug(process.stdout)
+        if process.stderr:
+            logger.error(process.stderr)
+        if process.stdout:
+            logger.debug(process.stdout)
 
         with open(filename, "rb") as outfile:
             result_data = pickle.load(outfile)
@@ -260,103 +259,6 @@ async def __executor(event):
     if os.path.isfile(filename):
         update_status(100, a_task, result=getAbsoluteRelative(filename, False))
         logger.info("1 task complete")
-
-    # if data is None:
-    #     logger.debug('property data is None')
-    #     return
-
-    # image_id = data['id']
-    # user = data['user']
-    # override = data['override']
-    #
-    # logger.info(f'Processing image {image_id}')
-    #
-    # if image_id is None:
-    #     logger.debug('property image_id is None')
-    #     return
-    #
-    # if user is None:
-    #     logger.debug('property user is None')
-    #     return
-    #
-    # manager = OmeroImageFileManager(image_id)
-    #
-    # if not manager.is_available():
-    #     logger.info(f'image {image_id} is not available for download! Skipping!')
-    #     return
-    #
-    # if manager.is_locked():
-    #     logger.info(f'image {image_id} is locked! Skipping!')
-    #     return
-    #
-    # try:
-    #     manager.lock()
-    #
-    #     logger.debug(f'Get session for user: {user}')
-    #     session = omero_blitz.get(user, False)
-    #     if session is None:
-    #         logger.info(f'No blitz session for user: {user}')
-    #         return
-    #
-    #     try:
-    #         gateway = session.get_gateway()
-    #
-    #         if not override and manager.exists():
-    #             logger.info(f'image {image_id} exists! Skipping!')
-    #             return
-    #
-    #         if not can_download(gateway, image_id):
-    #             logger.info(f'image {image_id} cannot be downloaded')
-    #             manager.make_not_available()
-    #             return
-    #
-    #         files_info = get_original_files_info(gateway, image_id)
-    #
-    #         logger.info(f'image {image_id} has files_info: {files_info}')
-    #
-    #         image_size = files_info['size']
-    #
-    #         logger.debug(f'image {image_id} has size: {image_size}')
-    #
-    #         # pool_size = get_pool_size('WORKER_THREADS_POOL')
-    #         manager.set_expected_size(image_size)
-    #         # chunk_size = max(MIN_CHUNK_SIZE, math.ceil(image_size / pool_size))
-    #         manager.set_chunk_size(MIN_CHUNK_SIZE)
-    #
-    #         alive = {'is_alive': True}
-    #
-    #         pool = ThreadPool(processes=get_pool_size('WORKER_THREADS_POOL'))
-    #         try:
-    #             chunks = manager.get_unfinished_chunks()
-    #             while len(chunks) > 0:
-    #                 logger.debug(f'unfinished chunks: {chunks}')
-    #
-    #                 chunks = [(manager, user, index, alive) for index in chunks]
-    #
-    #                 task = pool.map_async(__downloader, chunks)
-    #
-    #                 while not task.ready():
-    #                     time.sleep(0.5)
-    #
-    #                 chunks = manager.get_unfinished_chunks()
-    #
-    #             manager.merge_chunks()
-    #         except KeyboardInterrupt:
-    #             pool.terminate()
-    #             raise
-    #         finally:
-    #             alive['is_alive'] = False
-    #             pool.close()
-    #             pool.join()
-    #     finally:
-    #         logger.debug(f'leave session')
-    #         session.close()
-    # except KeyboardInterrupt:
-    #     raise
-    # except Exception as e:
-    #     logger.exception(f'catch exception: {e}')
-    # finally:
-    #     manager.unlock()
 
 
 def worker(name):
