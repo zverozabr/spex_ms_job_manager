@@ -100,12 +100,9 @@ def run_subprocess(folder, script, part, data):
     params = get_platform_venv_params(script, part)
 
     script_path = os.path.join(params["script_copy_path"], str(uuid.uuid4()))
-    # os.makedirs(script_path, exist_ok=True)
 
     try:
-        # shutil.copytree(os.path.join(folder, part), script_path)
         shutil.copytree(os.path.join(folder, part), script_path)
-        # shutil.copytree(folder, script_path)
         runner_path = os.path.join(script_path, "__runner__.py")
         shutil.copyfile(
             os.path.join(os.path.dirname(os.path.dirname(__file__)), "runner.py"),
@@ -225,6 +222,7 @@ def get_path(job_id, task_id):
 async def __executor(event):
 
     a_task = event.data.get("task")
+    update_status(1, a_task)
     a_task["params"] = {**a_task["params"], **enrich_task_data(a_task)}
 
     # download image tiff
