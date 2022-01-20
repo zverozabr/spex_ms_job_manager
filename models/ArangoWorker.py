@@ -9,6 +9,14 @@ EVENT_TYPE = 'backend/start_job'
 collection = "tasks"
 
 
+def update_status(status, a_task, result=None):
+    search = "FILTER doc._key == @value LIMIT 1"
+    data = {"status": status}
+    if result:
+        data.update({"result": result})
+    db_instance().update(collection, data, search, value=a_task["id"])
+
+
 def get_task():
     tasks = db_instance().select(
         collection,
@@ -29,6 +37,7 @@ def worker(name):
     def listener():
         if a_task := get_task():
             send_event('backend/start_job', {"task": a_task})
+            update_status(1, a_task)
             logger.info(f'founded task send it to in work: {a_task.get("name")} / {a_task.get("key")}')
 
     try:

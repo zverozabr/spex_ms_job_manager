@@ -1,4 +1,5 @@
 from os import cpu_count, getenv
+from spex_common.models.Task import task
 import shutil
 import os
 import uuid
@@ -170,8 +171,7 @@ def get_pool_size(env_name) -> int:
     if value.lower() == 'cpus':
         value = cpu_count()
 
-    # return max(2, int(value))
-    return 1
+    return max(2, int(value))
 
 
 def enrich_task_data(a_task):
@@ -219,10 +219,37 @@ def get_path(job_id, task_id):
     return path
 
 
+def get_task_with_status(_id: str):
+    tasks = db_instance().select(
+        collection,
+        "FILTER doc._id == @id and doc.status == 1"
+        "LIMIT 1 ",
+        id=_id,
+    )
+    if len(tasks) == 1:
+        return task(tasks[0]).to_json()
+    else:
+        return None
+
+
 async def __executor(event):
 
     a_task = event.data.get("task")
-    update_status(1, a_task)
+
+    if not a_task:
+        return
+
+    a_task = a_task["_id"]
+
+    if not a_task:
+        return
+
+    a_task = get_task_with_status(a_task)
+
+    if not a_task:
+        return
+
+    update_status(2, a_task)
     a_task["params"] = {**a_task["params"], **enrich_task_data(a_task)}
 
     # download image tiff
@@ -257,6 +284,9 @@ async def __executor(event):
     if os.path.isfile(filename):
         update_status(100, a_task, result=getAbsoluteRelative(filename, False))
         logger.info("1 task complete")
+    else:
+        update_status(-1, a_task)
+        logger.info("1 task uncompleted go to -1")
 
 
 def worker(name):
