@@ -11,15 +11,17 @@ from spex_common.modules.logging import get_logger
 from spex_common.modules.aioredis import create_aioredis_client
 from spex_common.modules.database import db_instance
 from spex_common.services.Utils import getAbsoluteRelative
-from spex_common.modules.aioredis import send_event
+from spex_common.modules.aioredis import send_event, RedisEvent
 from spex_common.models.OmeroImageFileManager import (
     OmeroImageFileManager as FileManager,
 )
 import logging
+import asyncio
+from spex_common.config import load_config
 
-EVENT_TYPE = 'backend/start_job'
+EVENT_TYPE = "backend/start_job"
 MIN_CHUNK_SIZE = 1024 * 1024 * 10
-collection = 'tasks'
+collection = "tasks"
 logger = get_logger()
 
 
@@ -36,10 +38,9 @@ def get_platform_venv_params(script, part):
     not_posix = os.name != "posix"
 
     executor = f"python" if not_posix else f"python3"
-    start_script = "source" if not_posix else "."
     create_venv = f"{executor} -m venv {env_path}"
 
-    activate_venv = f"{start_script} {os.path.join(env_path, 'bin', 'activate')}"
+    activate_venv = f"source {os.path.join(env_path, 'bin', 'activate')}"
     if not_posix:
         activate_venv = os.path.join(env_path, "Scripts", "activate.bat")
 
@@ -86,15 +87,15 @@ def check_create_install_lib(script, part, libs):
     logger.debug(process.stdout.splitlines())
 
 
-def get_image_from_omero(a_task) -> str or None:
+async def get_image_from_omero(a_task) -> str or None:
     image_id = a_task["omeroId"]
     file = FileManager(image_id)
     if file.exists():
         return file.get_filename()
 
     author = a_task.get("author").get("login")
-    send_event(
-      "omero/download/image", {"id": image_id, "override": False, "user": author}
+    await send_event(
+        "omero/download/image", {"id": image_id, "override": False, "user": author}
     )
     return None
 
@@ -105,6 +106,7 @@ def run_subprocess(folder, script, part, data):
     script_path = os.path.join(params["script_copy_path"], str(uuid.uuid4()))
 
     try:
+
         shutil.copytree(os.path.join(folder, part), script_path)
         runner_path = os.path.join(script_path, "__runner__.py")
         shutil.copyfile(
@@ -139,10 +141,10 @@ def run_subprocess(folder, script, part, data):
 
 
 def start_scenario(
-        script: str = "",
-        part: str = "",
-        folder: str = "",
-        **kwargs,
+    script: str = "",
+    part: str = "",
+    folder: str = "",
+    **kwargs,
 ):
     manifest = os.path.join(folder, part, "manifest.json")
 
@@ -164,14 +166,15 @@ def start_scenario(
             )
 
     check_create_install_lib(script, part, data.get("libs", []))
+
     return run_subprocess(folder, script, part, kwargs)
 
 
 def get_pool_size(env_name) -> int:
-    # value = getenv(env_name, 'cpus')
-    # if value.lower() == 'cpus':
-    #    value = cpu_count()
-    return 2
+    value = getenv(env_name, "cpus")
+    if value.lower() == "cpus":
+        value = cpu_count()
+    return 1
     # return max(2, int(value))
 
 
@@ -223,8 +226,7 @@ def get_path(job_id, task_id):
 def get_task_with_status(_id: str):
     tasks = db_instance().select(
         collection,
-        "FILTER doc._id == @id and doc.status == 1"
-        "LIMIT 1 ",
+        "FILTER doc._id == @id and doc.status == 1" "LIMIT 1 ",
         id=_id,
     )
     if len(tasks) == 1:
@@ -233,59 +235,51 @@ def get_task_with_status(_id: str):
         return None
 
 
-def __executor(event):
+async def __executor(event: RedisEvent):
+
     a_task = event.data.get("task")
+    print(1)
+    if a_task := get_task_with_status(a_task["_id"]):
+        update_status(2, a_task)
+        a_task["params"] = {**a_task["params"], **enrich_task_data(a_task)}
 
-    if not a_task:
-        return
-
-    a_task = a_task["_id"]
-
-    if not a_task:
-        return
-
-    a_task = get_task_with_status(a_task)
-
-    if not a_task:
-        return
-
-    update_status(2, a_task)
-    a_task["params"] = {**a_task["params"], **enrich_task_data(a_task)}
-
-    # download image tiff
-    if not a_task["params"].get("image_path"):
-        path = get_image_from_omero(a_task)
-    else:
-        path = a_task["params"].get("image_path")
-
-    if path is None:
-        update_status(-1, a_task)
-        return None
-
-    script_path = getAbsoluteRelative(
-        os.path.join(
-            os.getenv("DATA_STORAGE"), "Scripts", f'{a_task["params"]["script"]}'
-        )
-    )
-
-    filename = os.path.join(get_path(a_task["id"], a_task["parent"]), "result.pickle")
-
-    if os.path.isfile(path):
-        a_task["params"].update(image_path=path, folder=script_path)
-
-        result = start_scenario(**a_task["params"])
-        if not result:
-            logger.info(f'problems with scenario params {a_task["params"]}')
+        # download image tiff
+        if not a_task["params"].get("image_path"):
+            path = await get_image_from_omero(a_task)
         else:
-            with open(filename, "wb") as outfile:
-                pickle.dump(result, outfile)
+            path = a_task["params"].get("image_path")
 
-    if os.path.isfile(filename):
-        update_status(100, a_task, result=getAbsoluteRelative(filename, False))
-        logger.info("1 task complete")
-    else:
-        update_status(-1, a_task)
-        logger.info("1 task uncompleted go to -1")
+        if path is None:
+            update_status(-1, a_task)
+            return None
+
+        script_path = getAbsoluteRelative(
+            os.path.join(
+                os.getenv("DATA_STORAGE"), "Scripts", f'{a_task["params"]["script"]}'
+            )
+        )
+
+        filename = os.path.join(
+            get_path(a_task["id"], a_task["parent"]), "result.pickle"
+        )
+
+        if os.path.isfile(path):
+            a_task["params"].update(image_path=path, folder=script_path)
+
+            result = start_scenario(**a_task["params"])
+
+            if not result:
+                logger.info(f'problems with scenario params {a_task["params"]}')
+            else:
+                with open(filename, "wb") as outfile:
+                    pickle.dump(result, outfile)
+
+        if os.path.isfile(filename):
+            update_status(100, a_task, result=getAbsoluteRelative(filename, False))
+            logger.info("1 task complete")
+        else:
+            update_status(-1, a_task)
+            logger.info("1 task uncompleted go to -1")
 
 
 def worker(name):
@@ -296,27 +290,62 @@ def worker(name):
 
     @redis_client.event(EVENT_TYPE)
     async def listener(event):
-        logger.debug(f'catch event: {event}')
-        __executor(event)
+        logger.debug(f"catch event: {event}")
+        await __executor(event)
 
     try:
-        logger.info('Starting')
+        logger.info("Starting")
         logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
         redis_client.run()
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        logger.exception(f'catch exception: {e}')
+        logger.exception(f"catch exception: {e}")
     finally:
-        logger.info('Closing')
+        logger.info("Closing")
         redis_client.close()
 
 
 class Worker(Process):
     def __init__(self, index=0):
         super().__init__(
-            name=f'Spex.JM.Worker.{index + 1}',
+            name=f"Spex.JM.Worker.{index + 1}",
             target=worker,
-            args=(f'spex.ms-job-manager.worker.{index + 1}',),
-            daemon=True
+            args=(f"spex.ms-job-manager.worker.{index + 1}",),
+            daemon=True,
         )
+
+
+data = {
+    "task": {
+        "omeroId": "101",
+        "name": "load_tiff",
+        "content": "empty",
+        "author": {"login": "root", "id": "3365"},
+        "parent": "7139195",
+        "params": {
+            "omeroIds": ["101"],
+            "image_path": "",
+            "folder": "cell_seg",
+            "script": "cell_seg",
+            "part": "load_tiff",
+        },
+        "status": -1,
+        "csvdata": [],
+        "id": "7139197",
+        "_id": "tasks/7139197",
+        "impath": "",
+        "result": "",
+    }
+}
+event = RedisEvent('type', data)
+
+
+async def main():
+    load_config()
+    logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+    await __executor(event)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

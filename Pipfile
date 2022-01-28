@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 spex-common = {editable = true, path = "./../../common"}
+nest-asyncio = "==1.5.4"
 
 [dev-packages]
 

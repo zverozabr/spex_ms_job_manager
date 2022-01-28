@@ -2,7 +2,9 @@ from spex_common.config import load_config
 from spex_common.modules.logging import get_logger
 from models.Worker import Worker, get_pool_size
 from models.ArangoWorker import Worker as ArangoWorker
+import nest_asyncio
 
+nest_asyncio.apply()
 collection = "tasks"
 
 

@@ -4,7 +4,7 @@ from spex_common.modules.aioredis import send_event
 from spex_common.services.Timer import every
 from spex_common.modules.database import db_instance
 from spex_common.models.Task import task
-
+import logging
 EVENT_TYPE = 'backend/start_job'
 collection = "tasks"
 
@@ -42,6 +42,7 @@ def worker(name):
 
     try:
         logger.info('Starting')
+        logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
         every(5, listener)
     except KeyboardInterrupt:
         pass
