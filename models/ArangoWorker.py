@@ -4,9 +4,40 @@ from spex_common.modules.aioredis import send_event
 from spex_common.services.Timer import every
 from spex_common.modules.database import db_instance
 from spex_common.models.Task import task
+from spex_common.models.History import history
+from datetime import datetime
 import logging
 EVENT_TYPE = 'backend/start_job'
 collection = "tasks"
+
+
+def add_hist(parent, content):
+    db_instance().insert('history', history({
+        'author': {'login': 'job_manager_catcher', 'id': '0'},
+        'date': str(datetime.now()),
+        'content': content,
+        'parent': parent,
+    }).to_json())
+
+
+def can_start(task_id):
+    last_records = db_instance().select(
+        'history',
+        "FILTER doc.parent == @value SORT doc.date DESC LIMIT 3 ",
+        value=task_id,
+    )
+    key_arr = [record["_key"] for record in last_records]
+    last_canceled_records = db_instance().select(
+        'history',
+        "FILTER doc.parent == @value and doc.content Like @content "
+        "SORT doc.date DESC LIMIT 3 ",
+        value=task_id,
+        content="%-1 to: 1%"
+    )
+    key_arr_2 = [record["_key"] for record in last_canceled_records]
+    if key_arr_2 == key_arr:
+        return False
+    return True
 
 
 def update_status(status, a_task, result=None):
@@ -14,7 +45,9 @@ def update_status(status, a_task, result=None):
     data = {"status": status}
     if result:
         data.update({"result": result})
-    db_instance().update(collection, data, search, value=a_task["id"])
+    if can_start(a_task["_id"]):
+        db_instance().update(collection, data, search, value=a_task["id"])
+        add_hist(a_task["_id"], f'status from: {a_task["status"]} to: {status}')
 
 
 def get_task():

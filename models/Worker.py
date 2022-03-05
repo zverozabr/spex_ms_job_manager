@@ -1,5 +1,6 @@
 from os import cpu_count, getenv
 from spex_common.models.Task import task
+from spex_common.models.History import history
 import shutil
 import os
 import uuid
@@ -16,11 +17,42 @@ from spex_common.models.OmeroImageFileManager import (
     OmeroImageFileManager as FileManager,
 )
 import logging
+from datetime import datetime
+
 
 EVENT_TYPE = 'backend/start_job'
 MIN_CHUNK_SIZE = 1024 * 1024 * 10
 collection = 'tasks'
 logger = get_logger()
+
+
+def add_hist(parent, content):
+    db_instance().insert('history', history({
+        'author': {'login': 'job_manager_runner', 'id': '0'},
+        'date': str(datetime.now()),
+        'content': content,
+        'parent': parent,
+    }).to_json())
+
+
+def can_start(task_id):
+    last_records = db_instance().select(
+        'history',
+        "FILTER doc.parent == @value SORT doc.date DESC LIMIT 3 ",
+        value=task_id,
+    )
+    key_arr = [record["_key"] for record in last_records]
+    last_canceled_records = db_instance().select(
+        'history',
+        "FILTER doc.parent == @value and doc.content Like @content "
+        "SORT doc.date DESC LIMIT 3 ",
+        value=task_id,
+        content="%-1 to: 1%"
+    )
+    key_arr_2 = [record["_key"] for record in last_canceled_records]
+    if key_arr_2 == key_arr:
+        return False
+    return True
 
 
 def get_platform_venv_params(script, part):
@@ -207,9 +239,12 @@ def enrich_task_data(a_task):
 def update_status(status, a_task, result=None):
     search = "FILTER doc._key == @value LIMIT 1"
     data = {"status": status}
+
     if result:
         data.update({"result": result})
-    db_instance().update(collection, data, search, value=a_task["id"])
+    if can_start(a_task["_id"]):
+        db_instance().update(collection, data, search, value=a_task["id"])
+        add_hist(a_task["_id"], f'status from: {a_task["status"]} to: {status}')
 
 
 def get_path(job_id, task_id):
