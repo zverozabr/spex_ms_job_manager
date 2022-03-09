@@ -42,15 +42,20 @@ def can_start(task_id):
         value=task_id,
     )
     key_arr = [record["_key"] for record in last_records]
+    if not key_arr:
+        return True
     last_canceled_records = db_instance().select(
         'history',
-        "FILTER doc.parent == @value and doc.content Like @content "
+        "FILTER doc.parent == @value"
+        " and (doc.content Like @content "
+        " or doc.content Like @content2) "
         "SORT doc.date DESC LIMIT 3 ",
         value=task_id,
-        content="%-1 to: 1%"
+        content="%-1 to: 1%",
+        content2="%1 to: 2%"
     )
     key_arr_2 = [record["_key"] for record in last_canceled_records]
-    if key_arr_2 == key_arr:
+    if key_arr_2 == key_arr and len(key_arr) == 3:
         return False
     return True
 
