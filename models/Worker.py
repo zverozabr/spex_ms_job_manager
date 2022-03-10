@@ -136,9 +136,8 @@ def get_image_from_omero(a_task) -> str or None:
     return None
 
 
-def run_subprocess(folder, script, part, data):
+def run_subprocess(folder, script, part, data) -> dict:
     params = get_platform_venv_params(script, part)
-
     script_path = os.path.join(params["script_copy_path"], str(uuid.uuid4()))
 
     try:
@@ -163,6 +162,10 @@ def run_subprocess(folder, script, part, data):
             capture_output=True,
             text=True,
         )
+        hist_data = {
+            "stderr": process.stderr if process.stderr else "",
+            "stdout": process.stdout if process.stdout else "",
+        }
         if process.stderr:
             logger.error(process.stderr)
         if process.stdout:
@@ -170,7 +173,7 @@ def run_subprocess(folder, script, part, data):
 
         with open(filename, "rb") as outfile:
             result_data = pickle.load(outfile)
-            return {**data, **result_data}
+            return {**data, **result_data, **hist_data}
     finally:
         shutil.rmtree(script_path, ignore_errors=True)
 
@@ -250,6 +253,9 @@ def update_status(status, a_task, result=None):
     if can_start(a_task["_id"]):
         db_instance().update(collection, data, search, value=a_task["id"])
         add_hist(a_task["_id"], f'status from: {a_task["status"]} to: {status}')
+    else:
+        data = {"status": -2}
+        db_instance().update(collection, data, search, value=a_task["id"])
 
 
 def get_path(job_id, task_id):
@@ -317,6 +323,17 @@ def __executor(event):
         if not result:
             logger.info(f'problems with scenario params {a_task["params"]}')
         else:
+            hist_dict = {
+                key: result[key]
+                for key in ('stderr', 'stdout')
+            }
+            add_hist(a_task["id"], hist_dict)
+
+            result = {
+                key: result[key]
+                for key in result.keys() if key not in ('stderr', 'stdout')
+            }
+
             with open(filename, "wb") as outfile:
                 pickle.dump(result, outfile)
 
