@@ -2,7 +2,8 @@
 **/.classpath
 **/.dockerignore
 scripts_envs/
-.idea
+.idea/
+.git/
 # **/.env
 **/.git
 **/.gitignore

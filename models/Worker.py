@@ -1,5 +1,6 @@
 from os import cpu_count, getenv
 from spex_common.models.Task import task
+from spex_common.models.History import history
 import shutil
 import os
 import uuid
@@ -16,11 +17,47 @@ from spex_common.models.OmeroImageFileManager import (
     OmeroImageFileManager as FileManager,
 )
 import logging
+from datetime import datetime
+
 
 EVENT_TYPE = 'backend/start_job'
 MIN_CHUNK_SIZE = 1024 * 1024 * 10
 collection = 'tasks'
 logger = get_logger()
+
+
+def add_hist(parent, content):
+    db_instance().insert('history', history({
+        'author': {'login': 'job_manager_runner', 'id': '0'},
+        'date': str(datetime.now()),
+        'content': content,
+        'parent': parent,
+    }).to_json())
+
+
+def can_start(task_id):
+    last_records = db_instance().select(
+        'history',
+        "FILTER doc.parent == @value SORT doc.date DESC LIMIT 3 ",
+        value=task_id,
+    )
+    key_arr = [record["_key"] for record in last_records]
+    if not key_arr:
+        return True
+    last_canceled_records = db_instance().select(
+        'history',
+        "FILTER doc.parent == @value"
+        " and (doc.content Like @content "
+        " or doc.content Like @content2) "
+        "SORT doc.date DESC LIMIT 3 ",
+        value=task_id,
+        content="%-1 to: 1%",
+        content2="%1 to: 2%"
+    )
+    key_arr_2 = [record["_key"] for record in last_canceled_records]
+    if key_arr_2 == key_arr and len(key_arr) == 3:
+        return False
+    return True
 
 
 def get_platform_venv_params(script, part):
@@ -99,9 +136,8 @@ def get_image_from_omero(a_task) -> str or None:
     return None
 
 
-def run_subprocess(folder, script, part, data):
+def run_subprocess(folder, script, part, data) -> dict:
     params = get_platform_venv_params(script, part)
-
     script_path = os.path.join(params["script_copy_path"], str(uuid.uuid4()))
 
     try:
@@ -126,6 +162,10 @@ def run_subprocess(folder, script, part, data):
             capture_output=True,
             text=True,
         )
+        hist_data = {
+            "stderr": process.stderr if process.stderr else "",
+            "stdout": process.stdout if process.stdout else "",
+        }
         if process.stderr:
             logger.error(process.stderr)
         if process.stdout:
@@ -133,7 +173,7 @@ def run_subprocess(folder, script, part, data):
 
         with open(filename, "rb") as outfile:
             result_data = pickle.load(outfile)
-            return {**data, **result_data}
+            return {**data, **result_data, **hist_data}
     finally:
         shutil.rmtree(script_path, ignore_errors=True)
 
@@ -207,9 +247,15 @@ def enrich_task_data(a_task):
 def update_status(status, a_task, result=None):
     search = "FILTER doc._key == @value LIMIT 1"
     data = {"status": status}
+
     if result:
         data.update({"result": result})
-    db_instance().update(collection, data, search, value=a_task["id"])
+    if can_start(a_task["_id"]):
+        db_instance().update(collection, data, search, value=a_task["id"])
+        add_hist(a_task["_id"], f'status from: {a_task["status"]} to: {status}')
+    else:
+        data = {"status": -2}
+        db_instance().update(collection, data, search, value=a_task["id"])
 
 
 def get_path(job_id, task_id):
@@ -277,6 +323,17 @@ def __executor(event):
         if not result:
             logger.info(f'problems with scenario params {a_task["params"]}')
         else:
+            hist_dict = {
+                key: result[key]
+                for key in ('stderr', 'stdout')
+            }
+            add_hist(a_task["id"], hist_dict)
+
+            result = {
+                key: result[key]
+                for key in result.keys() if key not in ('stderr', 'stdout')
+            }
+
             with open(filename, "wb") as outfile:
                 pickle.dump(result, outfile)
 
