@@ -208,11 +208,10 @@ def start_scenario(
 
 
 def get_pool_size(env_name) -> int:
-    # value = getenv(env_name, 'cpus')
-    # if value.lower() == 'cpus':
-    #    value = cpu_count()
-    return 2
-    # return max(2, int(value))
+    value = getenv(env_name, 'cpus')
+    if value.lower() == 'cpus':
+        value = cpu_count()
+    return max(2, int(value))
 
 
 def enrich_task_data(a_task):
@@ -279,7 +278,7 @@ def get_task_with_status(_id: str):
         return None
 
 
-def __executor(event):
+async def __executor(event):
     a_task = event.data.get("task")
 
     if not a_task:
@@ -303,6 +302,8 @@ def __executor(event):
         path = get_image_from_omero(a_task)
     else:
         path = a_task["params"].get("image_path")
+        if not os.path.isfile(path):
+            path = get_image_from_omero(a_task)
 
     if path is None:
         update_status(-1, a_task)
@@ -354,7 +355,7 @@ def worker(name):
     @redis_client.event(EVENT_TYPE)
     async def listener(event):
         logger.debug(f'catch event: {event}')
-        __executor(event)
+        await __executor(event)
 
     try:
         logger.info('Starting')

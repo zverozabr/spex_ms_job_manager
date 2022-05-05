@@ -77,8 +77,8 @@ def worker(name):
 
     def listener():
         if a_task := get_task():
-            send_event('backend/start_job', {"task": a_task})
             update_status(1, a_task)
+            send_event('backend/start_job', {"task": a_task})
             logger.info(f'founded task send it to in work: {a_task.get("name")} / {a_task.get("key")}')
 
     try:
