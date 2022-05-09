@@ -12,6 +12,7 @@ def start_workers():
     logger = get_logger('spex.ms-job-manager')
     logger.info('Starting')
     workers = []
+
     worker = ArangoWorker(0)
     workers.append(worker)
     worker.start()
