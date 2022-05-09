@@ -17,7 +17,7 @@ from spex_common.services.Utils import getAbsoluteRelative
 from spex_common.modules.aioredis import send_event
 from spex_common.models.OmeroImageFileManager import OmeroImageFileManager
 
-from Constants import EVENT_TYPE, collection
+from .Constants import EVENT_TYPE, collection
 from utils import (
     add_history as add_history_original,
     update_status as update_status_original
