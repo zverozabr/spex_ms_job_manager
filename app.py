@@ -1,11 +1,8 @@
+from multiprocessing import freeze_support
 from spex_common.config import load_config
 from spex_common.modules.logging import get_logger
 from models.Worker import Worker, get_pool_size
 from models.ArangoWorker import Worker as ArangoWorker
-import nest_asyncio
-
-nest_asyncio.apply()
-collection = "tasks"
 
 
 def start_workers():
@@ -32,5 +29,6 @@ def start_workers():
 
 
 if __name__ == "__main__":
+    freeze_support()
     load_config()
     start_workers()

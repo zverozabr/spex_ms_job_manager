@@ -122,7 +122,10 @@ def get_task_with_status(_id: str):
         id=_id,
     )
 
-    return task(tasks[0]).to_json() if len(tasks) == 1 else None
+    if not tasks:
+        return None
+
+    return task(tasks[0]).to_json()
 
 
 class Executor:
@@ -131,13 +134,18 @@ class Executor:
         self.task_id = task_id
 
     def run(self):
+        self.logger.info(f'run task: {self.task_id}')
         if not self.task_id:
+            self.logger.info(f'task id is not empty: {self.task_id}')
             return
 
         a_task = get_task_with_status(self.task_id)
 
         if not a_task:
+            self.logger.info(f'task is not found: {self.task_id}')
             return
+
+        self.logger.info(f'task in process: {self.task_id}')
 
         update_status(2, a_task)
         a_task["params"] = {**a_task["params"], **enrich_task_data(a_task)}
@@ -327,7 +335,7 @@ def worker(name):
     try:
         logger.info('Starting')
         logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
-        redis_client.run()
+        redis_client.run(5)
     except KeyboardInterrupt:
         pass
     except Exception as e:

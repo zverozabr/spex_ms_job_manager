@@ -21,7 +21,7 @@ update_status = partial(update_status_original, collection, 'job_manager_catcher
 def get_task():
     tasks = db_instance().select(
         collection,
-        "FILTER doc.status == 0 or (doc.status == -1 and doc.content like @value) "
+        "FILTER (doc.status == 0 or doc.status == -1) and doc.content like @value "
         "LIMIT 1 ",
         value="%empty%",
     )
