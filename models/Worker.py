@@ -10,6 +10,7 @@ from functools import partial
 from multiprocessing import Process
 
 from spex_common.models.Task import task
+from spex_common.models.Status import Text
 from spex_common.modules.logging import get_logger
 from spex_common.modules.aioredis import create_aioredis_client
 from spex_common.modules.database import db_instance
@@ -20,11 +21,15 @@ from spex_common.models.OmeroImageFileManager import OmeroImageFileManager
 from models.Constants import EVENT_TYPE, collection
 from utils import (
     add_history as add_history_original,
-    update_status as update_status_original
+    update_status as update_status_original,
+    add_to_waiting_table as add_to_waiting_table_original,
+    already_in_waiting_table,
+    del_from_waiting_list
 )
 
 add_history = partial(add_history_original, 'job_manager_runner')
 update_status = partial(update_status_original, collection, 'job_manager_runner')
+add_to_waiting_table = partial(add_to_waiting_table_original, login='job_manager_catcher')
 
 
 def get_platform_venv_params(script, part):
@@ -60,14 +65,29 @@ def get_platform_venv_params(script, part):
 def get_image_from_omero(a_task) -> str or None:
     image_id = a_task["omeroId"]
     file = OmeroImageFileManager(image_id)
-    if file.exists():
-        return file.get_filename()
-
     author = a_task.get("author").get("login")
-    send_event(
-      "omero/download/image", {"id": image_id, "override": False, "user": author}
+
+    key = "omero/download/image"
+    value = {"id": image_id, "override": False, "user": author}
+    what_awaits = {key: value}
+
+    if file.exists():
+        if already_in_waiting_table(what_awaits):
+            del_from_waiting_list(what_awaits)
+        return file.get_filename(), 0
+
+    if already_in_waiting_table(what_awaits):
+        update_status(Text.pending.value, a_task)
+        return None, Text.pending.value
+
+    send_event(key, value)
+
+    add_to_waiting_table(
+        who_waits=a_task.get("id"),
+        what_awaits=what_awaits
     )
-    return None
+
+    return None, 0
 
 
 def get_pool_size(env_name) -> int:
@@ -147,20 +167,22 @@ class Executor:
 
         self.logger.info(f'task in process: {self.task_id}')
 
-        update_status(2, a_task)
         a_task["params"] = {**a_task["params"], **enrich_task_data(a_task)}
-
+        new_status = a_task.get("status")
         # download image tiff
         if not a_task["params"].get("image_path"):
-            path = get_image_from_omero(a_task)
+            path, new_status = get_image_from_omero(a_task)
         else:
             path = a_task["params"].get("image_path")
             if not os.path.isfile(path):
-                path = get_image_from_omero(a_task)
+                path, new_status = get_image_from_omero(a_task)
 
         if path is None:
-            update_status(-1, a_task)
+            if new_status != Text.pending.value:
+                update_status(-1, a_task)
             return None
+
+        update_status(2, a_task)
 
         script_path = getAbsoluteRelative(
             os.path.join(

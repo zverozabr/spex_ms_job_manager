@@ -1,6 +1,7 @@
 from datetime import datetime
 from spex_common.modules.database import db_instance
 from spex_common.models.History import history
+from spex_common.models.WaitTableEntry import wait_table_entry
 
 
 def add_history(login, parent, content):
@@ -13,6 +14,40 @@ def add_history(login, parent, content):
         'content': content,
         'parent': parent,
     }).to_json())
+
+
+def add_to_waiting_table(login, who_waits, what_awaits):
+    db_instance().insert('waiting_table', wait_table_entry({
+        'author': {
+            'login': login,
+            'id': '0'
+        },
+        'date': str(datetime.now()),
+        'who_waits': who_waits,
+        'what_awaits': what_awaits,
+    }).to_json())
+
+
+def already_in_waiting_table(what_awaits):
+    last_records = db_instance().select(
+        'waiting_table',
+        'FILTER doc.what_awaits == @what_awaits',
+        what_awaits=what_awaits
+    )
+    key_arr = [record["_key"] for record in last_records]
+
+    if not key_arr:
+        return False
+
+    return True
+
+
+def del_from_waiting_list(what_awaits):
+    last_records = db_instance().delete(
+        'waiting_table',
+        'FILTER doc.what_awaits == @what_awaits',
+        what_awaits=what_awaits
+    )
 
 
 def can_start(task_id):
