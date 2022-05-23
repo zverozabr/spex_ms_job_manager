@@ -2,13 +2,14 @@ import logging
 from multiprocessing import Process
 from functools import partial
 
-from spex_common.models.Task import task
+import spex_common.services.Task as TaskService
 from spex_common.modules.aioredis import send_event
-from spex_common.modules.database import db_instance
 from spex_common.modules.logging import get_logger
 from spex_common.services.Timer import every
+from spex_common.models.Status import TaskStatus
 
-from models.Constants import collection, EVENT_TYPE
+
+from models.Constants import collection, Events
 from utils import (
     add_history as add_history_original,
     update_status as update_status_original
@@ -19,18 +20,27 @@ update_status = partial(update_status_original, collection, 'job_manager_catcher
 
 
 def get_task():
-    tasks = db_instance().select(
-        collection,
-        "FILTER (doc.status == 0 or doc.status == -1) and doc.content like @value "
-        "LIMIT 1 ",
+    tasks = TaskService.select_tasks(
+        search=f"FILTER ("
+               f" doc.status == @ready"
+               f" or doc.status == @error"
+               f")"
+               f" and doc.content like @value"
+               f" LIMIT 1",
         value="%empty%",
+        ready=TaskStatus.ready.value,
+        error=TaskStatus.error.value
     )
 
-    if len(tasks) == 1:
-        return task(tasks[0]).to_json()
+    if tasks:
+        return tasks[0]
 
-    tasks = db_instance().select(collection, " FILTER doc.status == 0 LIMIT 1  ")
-    return task(tasks[0]).to_json() if len(tasks) == 1 else None
+    tasks = TaskService.select_tasks(
+        search="FILTER doc.status == @status LIMIT 1",
+        status=TaskStatus.ready.value
+    )
+
+    return tasks[0] if tasks else None
 
 
 def worker(name):
@@ -38,8 +48,8 @@ def worker(name):
 
     def listener():
         if a_task := get_task():
-            update_status(1, a_task)
-            send_event(EVENT_TYPE, {"task": a_task})
+            update_status(TaskStatus.started.value, a_task)
+            send_event(Events.TASK_START, {"task": a_task})
             logger.info(f'found a task, sent it to in work: {a_task.get("name")} / {a_task.get("id")}')
 
     try:

@@ -9,8 +9,7 @@ from os import cpu_count, getenv
 from functools import partial
 from multiprocessing import Process
 
-from spex_common.models.Task import task
-from spex_common.models.Status import Text
+from spex_common.models.Status import TaskStatus
 from spex_common.modules.logging import get_logger
 from spex_common.modules.aioredis import create_aioredis_client
 from spex_common.modules.database import db_instance
@@ -18,13 +17,16 @@ from spex_common.services.Utils import getAbsoluteRelative
 from spex_common.modules.aioredis import send_event
 from spex_common.models.OmeroImageFileManager import OmeroImageFileManager
 
-from models.Constants import EVENT_TYPE, collection
+from models.Constants import collection, Events
 from utils import (
+    get_task_with_status,
     add_history as add_history_original,
     update_status as update_status_original,
     add_to_waiting_table as add_to_waiting_table_original,
     already_in_waiting_table,
-    del_from_waiting_list
+    del_from_waiting_table,
+    get_from_waiting_table,
+    get_tasks,
 )
 
 add_history = partial(add_history_original, 'job_manager_runner')
@@ -67,27 +69,28 @@ def get_image_from_omero(a_task) -> str or None:
     file = OmeroImageFileManager(image_id)
     author = a_task.get("author").get("login")
 
-    key = "omero/download/image"
-    value = {"id": image_id, "override": False, "user": author}
-    what_awaits = {key: value}
-
     if file.exists():
-        if already_in_waiting_table(what_awaits):
-            del_from_waiting_list(what_awaits)
         return file.get_filename(), 0
 
-    if already_in_waiting_table(what_awaits):
-        update_status(Text.pending.value, a_task)
-        return None, Text.pending.value
+    what_awaits = f"{Events.IMAGE_DOWNLOADED}:{image_id}"
+    waiter_type = 'task'
+    waiter_id = a_task.get("id")
 
-    send_event(key, value)
+    update_status(TaskStatus.pending.value, a_task)
+
+    if already_in_waiting_table(what_awaits, waiter_id, waiter_type):
+        return None, TaskStatus.pending.value
+
+    value = {"id": image_id, "override": False, "user": author}
+    send_event(Events.IMAGE_DOWNLOAD, value)
 
     add_to_waiting_table(
-        who_waits=a_task.get("id"),
-        what_awaits=what_awaits
+        waiter_id=waiter_id,
+        waiter_type=waiter_type,
+        what_awaits=what_awaits,
     )
 
-    return None, 0
+    return None, TaskStatus.pending.value
 
 
 def get_pool_size(env_name) -> int:
@@ -134,20 +137,6 @@ def get_path(job_id, task_id):
     return path
 
 
-def get_task_with_status(_id: str):
-    tasks = db_instance().select(
-        collection,
-        "FILTER doc._id == @id and doc.status == 1"
-        "LIMIT 1 ",
-        id=_id,
-    )
-
-    if not tasks:
-        return None
-
-    return task(tasks[0]).to_json()
-
-
 class Executor:
     def __init__(self, logger, task_id):
         self.logger = logger
@@ -159,7 +148,7 @@ class Executor:
             self.logger.info(f'task id is not empty: {self.task_id}')
             return
 
-        a_task = get_task_with_status(self.task_id)
+        a_task = get_task_with_status(self.task_id, TaskStatus.started.value)
 
         if not a_task:
             self.logger.info(f'task is not found: {self.task_id}')
@@ -170,19 +159,16 @@ class Executor:
         a_task["params"] = {**a_task["params"], **enrich_task_data(a_task)}
         new_status = a_task.get("status")
         # download image tiff
-        if not a_task["params"].get("image_path"):
+        path = a_task["params"].get("image_path")
+        if not (path and os.path.isfile(path)):
             path, new_status = get_image_from_omero(a_task)
-        else:
-            path = a_task["params"].get("image_path")
-            if not os.path.isfile(path):
-                path, new_status = get_image_from_omero(a_task)
 
         if path is None:
-            if new_status != Text.pending.value:
-                update_status(-1, a_task)
+            if new_status != TaskStatus.pending.value:
+                update_status(TaskStatus.error.value, a_task)
             return None
 
-        update_status(2, a_task)
+        update_status(TaskStatus.in_work.value, a_task)
 
         script_path = getAbsoluteRelative(
             os.path.join(
@@ -216,11 +202,19 @@ class Executor:
                     pickle.dump(result, outfile)
 
         if os.path.isfile(filename):
-            update_status(100, a_task, result=getAbsoluteRelative(filename, False))
-            self.logger.info("1 task complete")
+            update_status(
+                TaskStatus.complete.value,
+                a_task,
+                result=getAbsoluteRelative(filename, False)
+            )
+
+            send_event(Events.TASK_COMPLETED, {'id': a_task['id']})
+
+            self.logger.info(f"task is completed: {a_task['id']}")
         else:
-            update_status(-1, a_task)
-            self.logger.info("1 task uncompleted go to -1")
+            update_status(TaskStatus.error.value, a_task)
+            self.logger.info(f"task is uncompleted: {self.task_id}")
+            self.logger.info(f"set status to {TaskStatus.error.name}: {TaskStatus.error.value}")
 
     def start_scenario(
         self,
@@ -342,17 +336,62 @@ async def __executor(logger, event):
     executor.run()
 
 
+async def __executor_process_waiters(logger, event):
+    item_id = event.data.get("id")
+
+    if not item_id:
+        return
+
+    what_awaits = f"{event.type}:{item_id}"
+
+    logger.info(f"process for what_awaits: {what_awaits}")
+
+    items = get_from_waiting_table(what_awaits, 'task')
+
+    logger.info(f"found waiters: {len(items)}")
+
+    if not items:
+        return
+
+    waiters = [item.id for item in items]
+
+    items = [item.waiter_id for item in items]
+
+    items = get_tasks(items)
+
+    for item in items:
+        update_status(TaskStatus.ready.value, item)
+
+    del_from_waiting_table(waiters)
+
+
 def worker(name):
     logger = get_logger(name)
     redis_client = create_aioredis_client()
 
-    @redis_client.event(EVENT_TYPE)
-    async def listener(event):
+    @redis_client.event(Events.TASK_START)
+    async def job_start(event):
         if event is None or event.is_viewed:
             return
         logger.debug(f'catch event: {event}')
         event.set_is_viewed()
         await __executor(logger, event)
+
+    @redis_client.event(Events.IMAGE_DOWNLOADED)
+    async def image_downloaded(event):
+        if event is None or event.is_viewed:
+            return
+        logger.debug(f'catch event: {event}')
+        event.set_is_viewed()
+        await __executor_process_waiters(logger, event)
+
+    @redis_client.event(Events.TASK_COMPLETED)
+    async def job_completed(event):
+        if event is None or event.is_viewed:
+            return
+        logger.debug(f'catch event: {event}')
+        event.set_is_viewed()
+        await __executor_process_waiters(logger, event)
 
     try:
         logger.info('Starting')
