@@ -112,6 +112,19 @@ def enrich_task_data(a_task):
 
     data = {}
     jobs_ids = [item["_from"][5:] for item in parent_jobs]
+
+    upper_level = db_instance().select(
+        "pipeline_direction",
+        "FILTER doc._to in @value",
+        value=[item["_from"] for item in parent_jobs],
+    )
+    same_level = db_instance().select(
+        "pipeline_direction",
+        "FILTER doc._from in @value",
+        value=[item["_from"] for item in upper_level],
+    )
+    jobs_ids += [item["_to"][5:] for item in same_level]
+
     tasks = db_instance().select(
         "tasks",
         "FILTER doc.parent in @value "
