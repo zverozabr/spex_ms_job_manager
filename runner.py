@@ -1,4 +1,4 @@
-import app
+from app import run
 import pickle
 import os
 
@@ -21,4 +21,6 @@ def put(name, data):
 
 
 if __name__ == '__main__':
-    put(__file__, app.run(**get(__file__)))
+    print(f'current env: {os.environ["VIRTUAL_ENV"]}')
+    result = run(**get(__file__))
+    put(__file__, result)
