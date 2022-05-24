@@ -94,40 +94,6 @@ def can_start(task_id):
 
 
 def get_task_with_status(_id: str, status: int):
-
-    def get_grandpa_task_status_id(_id: str):
-        task = TaskService.select(_id[6:])
-        previous_task_id: str = ""
-        parent_jobs = db_instance().select(
-            "pipeline_direction",
-            "FILTER doc._to == @value",
-            value=f"jobs/{task.parent}",
-        )
-        if not parent_jobs:
-            return TaskStatus.complete.value, previous_task_id
-        jobs_ids = [item["_from"][5:] for item in parent_jobs]
-        task_list = db_instance().select(
-            "tasks",
-            "FILTER doc.parent in @value ",
-            value=jobs_ids,
-        )
-        previous_task_status: int = TaskStatus.complete.value
-        if task_list:
-            previous_task_status = task_list[0].get('status', 0)
-            previous_task_id = task_list[0].get('_key', "")
-
-        return previous_task_status, previous_task_id
-
-    previous_task_status, previous_tasks_id = get_grandpa_task_status_id(_id)
-    if previous_task_status != TaskStatus.complete.value:
-        add_to_waiting_table(
-            waiter_id=_id[6:],
-            waiter_type='task',
-            what_awaits=f'backend/task_completed:{previous_tasks_id}',
-            login='job_manager_catcher'
-        )
-        return None
-
     tasks = TaskService.select_tasks(
         search="FILTER doc._id == @value and doc.status == @status LIMIT 1",
         value=_id,
@@ -135,6 +101,35 @@ def get_task_with_status(_id: str, status: int):
     )
 
     return tasks[0] if tasks else None
+
+
+def get_parent_task_status(_id: str):
+    task = TaskService.select(_id[6:])
+    previous_task_id: str = ""
+    parent_jobs = db_instance().select(
+        "pipeline_direction",
+        "FILTER doc._to == @value",
+        value=f"jobs/{task.parent}",
+    )
+
+    if not parent_jobs:
+        return TaskStatus.complete.value, previous_task_id
+
+    jobs_ids = [item["_from"][5:] for item in parent_jobs]
+
+    task_list = db_instance().select(
+        "tasks",
+        "FILTER doc.parent in @value ",
+        value=jobs_ids,
+    )
+
+    previous_task_status: int = TaskStatus.complete.value
+
+    if task_list:
+        previous_task_status = task_list[0].get('status', 0)
+        previous_task_id = task_list[0].get('_key', "")
+
+    return previous_task_status, previous_task_id
 
 
 def get_tasks(ids):

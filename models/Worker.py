@@ -20,6 +20,7 @@ from spex_common.models.OmeroImageFileManager import OmeroImageFileManager
 from models.Constants import collection, Events
 from utils import (
     get_task_with_status,
+    get_parent_task_status,
     add_history as add_history_original,
     update_status as update_status_original,
     add_to_waiting_table as add_to_waiting_table_original,
@@ -49,7 +50,7 @@ def get_platform_venv_params(script, part):
 
     executor = "python" if not_posix else "python3"
     start_script = "source" if not_posix else "."
-    create_venv = f"{executor} -m venv {env_path}"
+    create_venv = f"{executor} -m venv {env_path} --system-site-packages"
 
     activate_venv = f"{start_script} {os.path.join(env_path, 'bin', 'activate')}"
     if not_posix:
@@ -60,7 +61,7 @@ def get_platform_venv_params(script, part):
         "script_copy_path": script_copy_path,
         "create_venv": create_venv,
         "activate_venv": activate_venv,
-        "executor": executor,
+        "executor": executor
     }
 
 
@@ -113,18 +114,6 @@ def enrich_task_data(a_task):
     data = {}
     jobs_ids = [item["_from"][5:] for item in parent_jobs]
 
-    upper_level = db_instance().select(
-        "pipeline_direction",
-        "FILTER doc._to in @value",
-        value=[item["_from"] for item in parent_jobs],
-    )
-    same_level = db_instance().select(
-        "pipeline_direction",
-        "FILTER doc._from in @value",
-        value=[item["_from"] for item in upper_level],
-    )
-    jobs_ids += [item["_to"][5:] for item in same_level]
-
     tasks = db_instance().select(
         "tasks",
         "FILTER doc.parent in @value "
@@ -169,7 +158,18 @@ class Executor:
 
         self.logger.info(f'task in process: {self.task_id}')
 
-        a_task["params"] = {**a_task["params"], **enrich_task_data(a_task)}
+        previous_task_status, previous_tasks_id = get_parent_task_status(self.task_id)
+        if previous_task_status != TaskStatus.complete.value:
+            add_to_waiting_table(
+                waiter_id=self.task_id[6:],
+                waiter_type='task',
+                what_awaits=f'{Events.TASK_COMPLETED}:{previous_tasks_id}',
+            )
+            self.logger.info(f'task is moved to waiters: {self.task_id} ; reason await previous: {previous_tasks_id}')
+            return
+
+        a_task["params"] = {**enrich_task_data(a_task), **a_task["params"]}
+
         new_status = a_task.get("status")
         # download image tiff
         path = a_task["params"].get("image_path")
@@ -178,8 +178,11 @@ class Executor:
 
         if path is None:
             if new_status != TaskStatus.pending.value:
+                self.logger.info(f'task status is set error: {self.task_id}')
                 update_status(TaskStatus.error.value, a_task)
-            return None
+            else:
+                self.logger.info(f'task is moved to waiters: {self.task_id} ; reason await image: {a_task["omeroId"]}')
+            return
 
         update_status(TaskStatus.in_work.value, a_task)
 
@@ -278,7 +281,8 @@ class Executor:
             )
             self.logger.debug(process.stdout.splitlines())
 
-        command = f"{params['activate_venv']} && {install_libs}"
+        command = f"{params['activate_venv']}" \
+                  f" && {install_libs}"
 
         self.logger.info(command)
 
