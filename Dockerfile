@@ -9,7 +9,7 @@ COPY ./common /app/common
 
 WORKDIR /app/services/app
 
-RUN pip install pandas
+RUN pip install pandas==1.3.4
 RUN pipenv install --system --deploy --ignore-pipfile
 
 CMD ["python", "app.py"]

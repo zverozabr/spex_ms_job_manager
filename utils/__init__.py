@@ -69,30 +69,6 @@ def del_from_waiting_table(ids):
         ids=ids
     )
 
-
-def can_start(task_id):
-    last_records = db_instance().select(
-        "history",
-        "FILTER doc.parent == @value SORT doc.date DESC LIMIT 3 ",
-        value=task_id,
-    )
-    key_arr = [record["_key"] for record in last_records]
-    if not key_arr:
-        return True
-    last_canceled_records = db_instance().select(
-        "history",
-        "FILTER doc.parent == @value"
-        " and (doc.content Like @content "
-        " or doc.content Like @content2) "
-        "SORT doc.date DESC LIMIT 3 ",
-        value=task_id,
-        content="%-1 to: 1%",
-        content2="%1 to: 2%"
-    )
-    key_arr_2 = [record["_key"] for record in last_canceled_records]
-    return not (key_arr_2 == key_arr and len(key_arr) == 3)
-
-
 def get_task_with_status(_id: str, status: int):
     tasks = TaskService.select_tasks(
         search="FILTER doc._id == @value and doc.status == @status LIMIT 1",
@@ -136,19 +112,24 @@ def get_tasks(ids):
     return TaskService.select_tasks(condition='in', _key=ids)
 
 
-def update_status(collection, login, status, a_task, result=None):
+def update_status(collection, login, status, a_task, result=None, error=None):
     search = "FILTER doc._key == @value LIMIT 1"
     data = {"status": status}
 
     if result:
         data.update({"result": result})
-    if can_start(a_task["_id"]):
-        db_instance().update(collection, data, search, value=a_task["id"])
-        add_history(
-            login,
-            a_task["_id"],
-            f'status from: {a_task["status"]} to: {status}'
-        )
-    else:
-        data = {"status": TaskStatus.pending_approval.value}
-        db_instance().update(collection, data, search, value=a_task["id"])
+
+    if error:
+        data.update({"error": error})
+
+    result = db_instance().update(
+        collection,
+        data,
+        search,
+        value=a_task["id"]
+    )
+    add_history(
+        login,
+        a_task["_id"],
+        f'status from: {a_task["status"]} to: {status}'
+    )

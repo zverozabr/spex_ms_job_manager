@@ -179,7 +179,7 @@ class Executor:
         if path is None:
             if new_status != TaskStatus.pending.value:
                 self.logger.info(f'task status is set error: {self.task_id}')
-                update_status(TaskStatus.error.value, a_task)
+                update_status(TaskStatus.error.value, a_task, error='image is not found')
             else:
                 self.logger.info(f'task is moved to waiters: {self.task_id} ; reason await image: {a_task["omeroId"]}')
             return
@@ -196,41 +196,47 @@ class Executor:
 
         filename = os.path.join(get_path(a_task["id"], a_task["parent"]), "result.pickle")
 
+        error = f'path of image is not a file: {path}'
         if os.path.isfile(path):
             a_task["params"].update(image_path=path, folder=script_path)
 
-            result = self.start_scenario(**a_task["params"])
-            if not result:
-                self.logger.info(f'problems with scenario params {a_task["params"]}')
-            else:
-                hist_dict = {
-                    key: result[key]
-                    for key in ('stderr', 'stdout')
-                }
-                add_history(a_task["id"], hist_dict)
+            try:
+                result = self.start_scenario(**a_task["params"])
+                if not result:
+                    error = f'problems with scenario params {a_task["params"]}'
+                    self.logger.error(error)
+                else:
+                    error = result.get('error')
+                    hist_dict = {
+                        key: result[key]
+                        for key in ("stderr", "stdout")
+                    }
+                    add_history(a_task["_id"], hist_dict)
 
-                result = {
-                    key: result[key]
-                    for key in result.keys() if key not in ('stderr', 'stdout')
-                }
+                    result = {
+                        key: result[key]
+                        for key in result.keys() if key not in ("stderr", "stdout")
+                    }
 
-                with open(filename, "wb") as outfile:
-                    pickle.dump(result, outfile)
+                    with open(filename, "wb") as outfile:
+                        pickle.dump(result, outfile)
+            except Exception as err:
+                error = str(err)
 
         if os.path.isfile(filename):
             update_status(
-                TaskStatus.complete.value,
+                TaskStatus.failed.value if error else TaskStatus.complete.value,
                 a_task,
-                result=getAbsoluteRelative(filename, False)
+                result=getAbsoluteRelative(filename, False),
+                error=error,
             )
-
-            send_event(Events.TASK_COMPLETED, {'id': a_task['id']})
-
             self.logger.info(f"task is completed: {a_task['id']}")
         else:
-            update_status(TaskStatus.error.value, a_task)
+            update_status(TaskStatus.failed.value, a_task, error=error)
             self.logger.info(f"task is uncompleted: {self.task_id}")
-            self.logger.info(f"set status to {TaskStatus.error.name}: {TaskStatus.error.value}")
+            self.logger.info(f"set status to failed: {TaskStatus.failed.value}")
+
+        send_event(Events.TASK_COMPLETED, {'id': a_task['id']})
 
     def start_scenario(
         self,
@@ -298,6 +304,7 @@ class Executor:
     def run_subprocess(self, folder, script, part, data) -> dict:
         params = get_platform_venv_params(script, part)
         script_path = os.path.join(params["script_copy_path"], str(uuid.uuid4()))
+        hist_data = {}
 
         try:
             shutil.copytree(os.path.join(folder, part), script_path)
@@ -330,9 +337,27 @@ class Executor:
             if process.stdout:
                 self.logger.debug(process.stdout)
 
+            if process.returncode:
+                self.logger.error(f"return code: {process.returncode}")
+                return {
+                    **data,
+                    **hist_data,
+                    'error': f'process exit code: {process.returncode}\nstderr: {process.stderr}'
+                }
+
             with open(filename, "rb") as outfile:
                 result_data = pickle.load(outfile)
-                return {**data, **result_data, **hist_data}
+                return {
+                    **data,
+                    **result_data,
+                    **hist_data
+                }
+        except Exception as e:
+            return {
+                **data,
+                'error': str(e),
+                **hist_data
+            }
         finally:
             shutil.rmtree(script_path, ignore_errors=True)
 
@@ -350,7 +375,10 @@ async def __executor(logger, event):
 
     executor = Executor(logger, a_task)
 
-    executor.run()
+    try:
+        executor.run()
+    except Exception as err:
+        logger.exception(err)
 
 
 async def __executor_process_waiters(logger, event):
