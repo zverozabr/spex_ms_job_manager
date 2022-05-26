@@ -1,67 +1,43 @@
-from os import cpu_count, getenv
-from spex_common.models.Task import task
-from spex_common.models.History import history
 import shutil
 import os
 import uuid
 import json
 import pickle
-from multiprocessing import Process
 import subprocess
+import logging
+from os import cpu_count, getenv
+from functools import partial
+from multiprocessing import Process
+
+from spex_common.models.Status import TaskStatus
 from spex_common.modules.logging import get_logger
 from spex_common.modules.aioredis import create_aioredis_client
 from spex_common.modules.database import db_instance
 from spex_common.services.Utils import getAbsoluteRelative
 from spex_common.modules.aioredis import send_event
-from spex_common.models.OmeroImageFileManager import (
-    OmeroImageFileManager as FileManager,
+from spex_common.models.OmeroImageFileManager import OmeroImageFileManager
+
+from models.Constants import collection, Events
+from utils import (
+    get_task_with_status,
+    get_parent_task_status,
+    add_history as add_history_original,
+    update_status as update_status_original,
+    add_to_waiting_table as add_to_waiting_table_original,
+    already_in_waiting_table,
+    del_from_waiting_table,
+    get_from_waiting_table,
+    get_tasks,
 )
-import logging
-from datetime import datetime
 
-
-EVENT_TYPE = 'backend/start_job'
-MIN_CHUNK_SIZE = 1024 * 1024 * 10
-collection = 'tasks'
-logger = get_logger()
-
-
-def add_hist(parent, content):
-    db_instance().insert('history', history({
-        'author': {'login': 'job_manager_runner', 'id': '0'},
-        'date': str(datetime.now()),
-        'content': content,
-        'parent': parent,
-    }).to_json())
-
-
-def can_start(task_id):
-    last_records = db_instance().select(
-        'history',
-        "FILTER doc.parent == @value SORT doc.date DESC LIMIT 3 ",
-        value=task_id,
-    )
-    key_arr = [record["_key"] for record in last_records]
-    if not key_arr:
-        return True
-    last_canceled_records = db_instance().select(
-        'history',
-        "FILTER doc.parent == @value"
-        " and (doc.content Like @content "
-        " or doc.content Like @content2) "
-        "SORT doc.date DESC LIMIT 3 ",
-        value=task_id,
-        content="%-1 to: 1%",
-        content2="%1 to: 2%"
-    )
-    key_arr_2 = [record["_key"] for record in last_canceled_records]
-    if key_arr_2 == key_arr and len(key_arr) == 3:
-        return False
-    return True
+add_history = partial(add_history_original, 'job_manager_runner')
+update_status = partial(update_status_original, collection, 'job_manager_runner')
+add_to_waiting_table = partial(add_to_waiting_table_original, login='job_manager_catcher')
 
 
 def get_platform_venv_params(script, part):
-    env_path = os.getenv("SCRIPTS_ENVS_PATH", "~/scripts_envs")
+    env_path = os.getenv("SCRIPTS_ENVS_PATH", f"~/scripts_envs")
+    env_path = os.path.expanduser(env_path)
 
     script_copy_path = os.path.join(env_path, "scripts", script, part)
     os.makedirs(script_copy_path, exist_ok=True)
@@ -72,9 +48,9 @@ def get_platform_venv_params(script, part):
 
     not_posix = os.name != "posix"
 
-    executor = f"python" if not_posix else f"python3"
+    executor = "python" if not_posix else "python3"
     start_script = "source" if not_posix else "."
-    create_venv = f"{executor} -m venv {env_path}"
+    create_venv = f"{executor} -m venv {env_path} --system-site-packages"
 
     activate_venv = f"{start_script} {os.path.join(env_path, 'bin', 'activate')}"
     if not_posix:
@@ -85,134 +61,44 @@ def get_platform_venv_params(script, part):
         "script_copy_path": script_copy_path,
         "create_venv": create_venv,
         "activate_venv": activate_venv,
-        "executor": executor,
+        "executor": executor
     }
-
-
-def check_create_install_lib(script, part, libs):
-    if not (isinstance(libs, list) and libs):
-        return
-
-    params = get_platform_venv_params(script, part)
-
-    install_libs = f"pip install {' '.join(libs)}"
-
-    if not os.path.isdir(params["env_path"]):
-        command = params["create_venv"]
-        logger.info(command)
-
-        process = subprocess.run(
-            command,
-            shell=True,
-            universal_newlines=True,
-            stdout=subprocess.PIPE,
-        )
-        logger.debug(process.stdout.splitlines())
-
-    command = f"{params['activate_venv']} && {install_libs}"
-
-    logger.info(command)
-
-    process = subprocess.run(
-        command,
-        shell=True,
-        universal_newlines=True,
-        stdout=subprocess.PIPE,
-    )
-
-    logger.debug(process.stdout.splitlines())
 
 
 def get_image_from_omero(a_task) -> str or None:
     image_id = a_task["omeroId"]
-    file = FileManager(image_id)
-    if file.exists():
-        return file.get_filename()
-
+    file = OmeroImageFileManager(image_id)
     author = a_task.get("author").get("login")
-    send_event(
-      "omero/download/image", {"id": image_id, "override": False, "user": author}
+
+    if file.exists():
+        return file.get_filename(), 0
+
+    what_awaits = f"{Events.IMAGE_DOWNLOADED}:{image_id}"
+    waiter_type = 'task'
+    waiter_id = a_task.get("id")
+
+    update_status(TaskStatus.pending.value, a_task)
+
+    if already_in_waiting_table(what_awaits, waiter_id, waiter_type):
+        return None, TaskStatus.pending.value
+
+    value = {"id": image_id, "override": False, "user": author}
+    send_event(Events.IMAGE_DOWNLOAD, value)
+
+    add_to_waiting_table(
+        waiter_id=waiter_id,
+        waiter_type=waiter_type,
+        what_awaits=what_awaits,
     )
-    return None
 
-
-def run_subprocess(folder, script, part, data) -> dict:
-    params = get_platform_venv_params(script, part)
-    script_path = os.path.join(params["script_copy_path"], str(uuid.uuid4()))
-
-    try:
-        shutil.copytree(os.path.join(folder, part), script_path)
-        runner_path = os.path.join(script_path, "__runner__.py")
-        shutil.copyfile(
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), "runner.py"),
-            runner_path,
-        )
-
-        filename = os.path.join(script_path, "__runner__.pickle")
-        with open(filename, "wb") as infile:
-            pickle.dump(data, infile)
-
-        command = f"{params['activate_venv']} && {params['executor']} {runner_path}"
-        logger.info(command)
-
-        process = subprocess.run(
-            command,
-            shell=True,
-            universal_newlines=True,
-            capture_output=True,
-            text=True,
-        )
-        hist_data = {
-            "stderr": process.stderr if process.stderr else "",
-            "stdout": process.stdout if process.stdout else "",
-        }
-        if process.stderr:
-            logger.error(process.stderr)
-        if process.stdout:
-            logger.debug(process.stdout)
-
-        with open(filename, "rb") as outfile:
-            result_data = pickle.load(outfile)
-            return {**data, **result_data, **hist_data}
-    finally:
-        shutil.rmtree(script_path, ignore_errors=True)
-
-
-def start_scenario(
-        script: str = "",
-        part: str = "",
-        folder: str = "",
-        **kwargs,
-):
-    manifest = os.path.join(folder, part, "manifest.json")
-
-    if not os.path.isfile(manifest):
-        return None
-
-    with open(manifest) as meta:
-        data = json.load(meta)
-
-    if not data:
-        return None
-
-    logger.info(f"{script}-{part}")
-    params = data.get("params")
-    for key, item in params.items():
-        if kwargs.get(key) is None:
-            raise ValueError(
-                f"Not have param '{key}' in script: {script}, in part {part}"
-            )
-
-    check_create_install_lib(script, part, data.get("libs", []))
-    return run_subprocess(folder, script, part, kwargs)
+    return None, TaskStatus.pending.value
 
 
 def get_pool_size(env_name) -> int:
-    # value = getenv(env_name, 'cpus')
-    # if value.lower() == 'cpus':
-    #    value = cpu_count()
-    return 2
-    # return max(2, int(value))
+    value = getenv(env_name, 'cpus')
+    if value.lower() == 'cpus':
+        value = cpu_count()
+    return max(2, int(value))
 
 
 def enrich_task_data(a_task):
@@ -227,6 +113,7 @@ def enrich_task_data(a_task):
 
     data = {}
     jobs_ids = [item["_from"][5:] for item in parent_jobs]
+
     tasks = db_instance().select(
         "tasks",
         "FILTER doc.parent in @value "
@@ -244,20 +131,6 @@ def enrich_task_data(a_task):
     return data
 
 
-def update_status(status, a_task, result=None):
-    search = "FILTER doc._key == @value LIMIT 1"
-    data = {"status": status}
-
-    if result:
-        data.update({"result": result})
-    if can_start(a_task["_id"]):
-        db_instance().update(collection, data, search, value=a_task["id"])
-        add_hist(a_task["_id"], f'status from: {a_task["status"]} to: {status}')
-    else:
-        data = {"status": -2}
-        db_instance().update(collection, data, search, value=a_task["id"])
-
-
 def get_path(job_id, task_id):
     path = os.path.join(os.getenv("DATA_STORAGE"), "jobs", job_id, task_id)
     if not os.path.isdir(path):
@@ -266,20 +139,230 @@ def get_path(job_id, task_id):
     return path
 
 
-def get_task_with_status(_id: str):
-    tasks = db_instance().select(
-        collection,
-        "FILTER doc._id == @id and doc.status == 1"
-        "LIMIT 1 ",
-        id=_id,
-    )
-    if len(tasks) == 1:
-        return task(tasks[0]).to_json()
-    else:
-        return None
+class Executor:
+    def __init__(self, logger, task_id):
+        self.logger = logger
+        self.task_id = task_id
+
+    def run(self):
+        self.logger.info(f'run task: {self.task_id}')
+        if not self.task_id:
+            self.logger.info(f'task id is not empty: {self.task_id}')
+            return
+
+        a_task = get_task_with_status(self.task_id, TaskStatus.started.value)
+
+        if not a_task:
+            self.logger.info(f'task is not found: {self.task_id}')
+            return
+
+        self.logger.info(f'task in process: {self.task_id}')
+
+        previous_task_status, previous_tasks_id = get_parent_task_status(self.task_id)
+        if previous_task_status != TaskStatus.complete.value:
+            add_to_waiting_table(
+                waiter_id=self.task_id[6:],
+                waiter_type='task',
+                what_awaits=f'{Events.TASK_COMPLETED}:{previous_tasks_id}',
+            )
+            self.logger.info(f'task is moved to waiters: {self.task_id} ; reason await previous: {previous_tasks_id}')
+            return
+
+        a_task["params"] = {**enrich_task_data(a_task), **a_task["params"]}
+
+        new_status = a_task.get("status")
+        # download image tiff
+        path = a_task["params"].get("image_path")
+        if not (path and os.path.isfile(path)):
+            path, new_status = get_image_from_omero(a_task)
+
+        if path is None:
+            if new_status != TaskStatus.pending.value:
+                self.logger.info(f'task status is set error: {self.task_id}')
+                update_status(TaskStatus.error.value, a_task, error='image is not found')
+            else:
+                self.logger.info(f'task is moved to waiters: {self.task_id} ; reason await image: {a_task["omeroId"]}')
+            return
+
+        update_status(TaskStatus.in_work.value, a_task)
+
+        script_path = getAbsoluteRelative(
+            os.path.join(
+                os.getenv("DATA_STORAGE"),
+                "Scripts",
+                f'{a_task["params"]["script"]}'
+            )
+        )
+
+        filename = os.path.join(get_path(a_task["id"], a_task["parent"]), "result.pickle")
+
+        error = f'path of image is not a file: {path}'
+        if os.path.isfile(path):
+            a_task["params"].update(image_path=path, folder=script_path)
+
+            try:
+                result = self.start_scenario(**a_task["params"])
+                if not result:
+                    error = f'problems with scenario params {a_task["params"]}'
+                    self.logger.error(error)
+                else:
+                    error = result.get('error')
+                    hist_dict = {
+                        key: result[key]
+                        for key in ("stderr", "stdout")
+                    }
+                    add_history(f"jobs/{a_task['parent']}", hist_dict)
+
+                    result = {
+                        key: result[key]
+                        for key in result.keys() if key not in ("stderr", "stdout")
+                    }
+
+                    with open(filename, "wb") as outfile:
+                        pickle.dump(result, outfile)
+            except Exception as err:
+                error = str(err)
+
+        if os.path.isfile(filename):
+            update_status(
+                TaskStatus.failed.value if error else TaskStatus.complete.value,
+                a_task,
+                result=getAbsoluteRelative(filename, False),
+                error=error,
+            )
+            self.logger.info(f"task is completed: {a_task['id']}")
+        else:
+            update_status(TaskStatus.failed.value, a_task, error=error)
+            self.logger.info(f"task is uncompleted: {self.task_id}")
+            self.logger.info(f"set status to failed: {TaskStatus.failed.value}")
+
+        send_event(Events.TASK_COMPLETED, {'id': a_task['id']})
+
+    def start_scenario(
+        self,
+        script: str = "",
+        part: str = "",
+        folder: str = "",
+        **kwargs,
+    ):
+        manifest = os.path.join(folder, part, "manifest.json")
+
+        if not os.path.isfile(manifest):
+            return None
+
+        with open(manifest) as meta:
+            data = json.load(meta)
+
+        if not data:
+            return None
+
+        self.logger.info(f"{script}-{part}")
+        params = data.get("params")
+        for key, item in params.items():
+            if kwargs.get(key) is None:
+                raise ValueError(
+                    f"Not have param '{key}' in script: {script}, in part {part}"
+                )
+
+        self.check_create_install_lib(script, part, data.get("libs", []))
+        return self.run_subprocess(folder, script, part, kwargs)
+
+    def check_create_install_lib(self, script, part, libs):
+        if not (isinstance(libs, list) and libs):
+            return
+
+        params = get_platform_venv_params(script, part)
+
+        install_libs = f"pip install {' '.join(libs)}"
+
+        if not os.path.isdir(params["env_path"]):
+            command = params["create_venv"]
+            self.logger.info(command)
+
+            process = subprocess.run(
+                command,
+                shell=True,
+                universal_newlines=True,
+                stdout=subprocess.PIPE,
+            )
+            self.logger.debug(process.stdout.splitlines())
+
+        command = f"{params['activate_venv']}" \
+                  f" && {install_libs}"
+
+        self.logger.info(command)
+
+        process = subprocess.run(
+            command,
+            shell=True,
+            universal_newlines=True,
+            stdout=subprocess.PIPE,
+        )
+
+        self.logger.debug(process.stdout.splitlines())
+
+    def run_subprocess(self, folder, script, part, data) -> dict:
+        params = get_platform_venv_params(script, part)
+        script_path = os.path.join(params["script_copy_path"], str(uuid.uuid4()))
+        hist_data = {}
+
+        try:
+            shutil.copytree(os.path.join(folder, part), script_path)
+            runner_path = os.path.join(script_path, "__runner__.py")
+            shutil.copyfile(
+                os.path.join(os.path.dirname(os.path.dirname(__file__)), "runner.py"),
+                runner_path,
+            )
+
+            filename = os.path.join(script_path, "__runner__.pickle")
+            with open(filename, "wb") as infile:
+                pickle.dump(data, infile)
+
+            command = f"{params['activate_venv']} && {params['executor']} {runner_path}"
+            self.logger.info(command)
+
+            process = subprocess.run(
+                command,
+                shell=True,
+                universal_newlines=True,
+                capture_output=True,
+                text=True,
+            )
+            hist_data = {
+                "stderr": process.stderr if process.stderr else "",
+                "stdout": process.stdout if process.stdout else "",
+            }
+            if process.stderr:
+                self.logger.error(process.stderr)
+            if process.stdout:
+                self.logger.debug(process.stdout)
+
+            if process.returncode:
+                self.logger.error(f"return code: {process.returncode}")
+                return {
+                    **data,
+                    **hist_data,
+                    'error': f'process exit code: {process.returncode}\nstderr: {process.stderr}'
+                }
+
+            with open(filename, "rb") as outfile:
+                result_data = pickle.load(outfile)
+                return {
+                    **data,
+                    **result_data,
+                    **hist_data
+                }
+        except Exception as e:
+            return {
+                **data,
+                'error': str(e),
+                **hist_data
+            }
+        finally:
+            shutil.rmtree(script_path, ignore_errors=True)
 
 
-def __executor(event):
+async def __executor(logger, event):
     a_task = event.data.get("task")
 
     if not a_task:
@@ -290,76 +373,75 @@ def __executor(event):
     if not a_task:
         return
 
-    a_task = get_task_with_status(a_task)
+    executor = Executor(logger, a_task)
 
-    if not a_task:
+    try:
+        executor.run()
+    except Exception as err:
+        logger.exception(err)
+
+
+async def __executor_process_waiters(logger, event):
+    item_id = event.data.get("id")
+
+    if not item_id:
         return
 
-    update_status(2, a_task)
-    a_task["params"] = {**a_task["params"], **enrich_task_data(a_task)}
+    what_awaits = f"{event.type}:{item_id}"
 
-    # download image tiff
-    if not a_task["params"].get("image_path"):
-        path = get_image_from_omero(a_task)
-    else:
-        path = a_task["params"].get("image_path")
+    logger.info(f"process for what_awaits: {what_awaits}")
 
-    if path is None:
-        update_status(-1, a_task)
-        return None
+    items = get_from_waiting_table(what_awaits, 'task')
 
-    script_path = getAbsoluteRelative(
-        os.path.join(
-            os.getenv("DATA_STORAGE"), "Scripts", f'{a_task["params"]["script"]}'
-        )
-    )
+    logger.info(f"found waiters: {len(items)}")
 
-    filename = os.path.join(get_path(a_task["id"], a_task["parent"]), "result.pickle")
+    if not items:
+        return
 
-    if os.path.isfile(path):
-        a_task["params"].update(image_path=path, folder=script_path)
+    waiters = [item.id for item in items]
 
-        result = start_scenario(**a_task["params"])
-        if not result:
-            logger.info(f'problems with scenario params {a_task["params"]}')
-        else:
-            hist_dict = {
-                key: result[key]
-                for key in ('stderr', 'stdout')
-            }
-            add_hist(a_task["id"], hist_dict)
+    items = [item.waiter_id for item in items]
 
-            result = {
-                key: result[key]
-                for key in result.keys() if key not in ('stderr', 'stdout')
-            }
+    items = get_tasks(items)
 
-            with open(filename, "wb") as outfile:
-                pickle.dump(result, outfile)
+    for item in items:
+        update_status(TaskStatus.ready.value, item)
 
-    if os.path.isfile(filename):
-        update_status(100, a_task, result=getAbsoluteRelative(filename, False))
-        logger.info("1 task complete")
-    else:
-        update_status(-1, a_task)
-        logger.info("1 task uncompleted go to -1")
+    del_from_waiting_table(waiters)
 
 
 def worker(name):
-    global logger
-
     logger = get_logger(name)
     redis_client = create_aioredis_client()
 
-    @redis_client.event(EVENT_TYPE)
-    async def listener(event):
+    @redis_client.event(Events.TASK_START)
+    async def job_start(event):
+        if event is None or event.is_viewed:
+            return
         logger.debug(f'catch event: {event}')
-        __executor(event)
+        event.set_is_viewed()
+        await __executor(logger, event)
+
+    @redis_client.event(Events.IMAGE_DOWNLOADED)
+    async def image_downloaded(event):
+        if event is None or event.is_viewed:
+            return
+        logger.debug(f'catch event: {event}')
+        event.set_is_viewed()
+        await __executor_process_waiters(logger, event)
+
+    @redis_client.event(Events.TASK_COMPLETED)
+    async def job_completed(event):
+        if event is None or event.is_viewed:
+            return
+        logger.debug(f'catch event: {event}')
+        event.set_is_viewed()
+        await __executor_process_waiters(logger, event)
 
     try:
         logger.info('Starting')
         logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
-        redis_client.run()
+        redis_client.run(5)
     except KeyboardInterrupt:
         pass
     except Exception as e:

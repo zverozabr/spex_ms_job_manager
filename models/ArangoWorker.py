@@ -1,75 +1,44 @@
-from multiprocessing import Process
-from spex_common.modules.logging import get_logger
-from spex_common.modules.aioredis import send_event
-from spex_common.services.Timer import every
-from spex_common.modules.database import db_instance
-from spex_common.models.Task import task
-from spex_common.models.History import history
-from datetime import datetime
 import logging
-EVENT_TYPE = 'backend/start_job'
-collection = "tasks"
+from multiprocessing import Process
+from functools import partial
+
+import spex_common.services.Task as TaskService
+from spex_common.modules.aioredis import send_event
+from spex_common.modules.logging import get_logger
+from spex_common.services.Timer import every
+from spex_common.models.Status import TaskStatus
 
 
-def add_hist(parent, content):
-    db_instance().insert('history', history({
-        'author': {'login': 'job_manager_catcher', 'id': '0'},
-        'date': str(datetime.now()),
-        'content': content,
-        'parent': parent,
-    }).to_json())
+from models.Constants import collection, Events
+from utils import (
+    update_status as update_status_original
+)
 
-
-def can_start(task_id):
-    last_records = db_instance().select(
-        'history',
-        "FILTER doc.parent == @value SORT doc.date DESC LIMIT 3 ",
-        value=task_id,
-    )
-    key_arr = [record["_key"] for record in last_records]
-    if not key_arr:
-        return True
-    last_canceled_records = db_instance().select(
-        'history',
-        "FILTER doc.parent == @value"
-        " and (doc.content Like @content "
-        " or doc.content Like @content2) "
-        "SORT doc.date DESC LIMIT 3 ",
-        value=task_id,
-        content="%-1 to: 1%",
-        content2="%1 to: 2%"
-    )
-    key_arr_2 = [record["_key"] for record in last_canceled_records]
-    if key_arr_2 == key_arr and len(key_arr) == 3:
-        return False
-    return True
-
-
-def update_status(status, a_task, result=None):
-    search = "FILTER doc._key == @value LIMIT 1"
-    data = {"status": status}
-    if result:
-        data.update({"result": result})
-    if can_start(a_task["_id"]):
-        db_instance().update(collection, data, search, value=a_task["id"])
-        add_hist(a_task["_id"], f'status from: {a_task["status"]} to: {status}')
-    else:
-        data = {"status": -2}
-        db_instance().update(collection, data, search, value=a_task["id"])
+update_status = partial(update_status_original, collection, 'job_manager_catcher')
 
 
 def get_task():
-    tasks = db_instance().select(
-        collection,
-        "FILTER doc.status == 0 or doc.status == -1 and doc.content like @value "
-        "LIMIT 1 ",
+    tasks = TaskService.select_tasks(
+        search=f"FILTER ("
+               f" doc.status == @ready"
+               f" or doc.status == @error"
+               f")"
+               f" and doc.content like @value"
+               f" LIMIT 1",
         value="%empty%",
+        ready=TaskStatus.ready.value,
+        error=TaskStatus.error.value
     )
-    if len(tasks) == 1:
-        return task(tasks[0]).to_json()
-    else:
-        tasks = db_instance().select(collection, " FILTER doc.status == 0 LIMIT 1  ")
-        return task(tasks[0]).to_json() if len(tasks) == 1 else None
+
+    if tasks:
+        return tasks[0]
+
+    tasks = TaskService.select_tasks(
+        search="FILTER doc.status == @status LIMIT 1",
+        status=TaskStatus.ready.value
+    )
+
+    return tasks[0] if tasks else None
 
 
 def worker(name):
@@ -77,9 +46,9 @@ def worker(name):
 
     def listener():
         if a_task := get_task():
-            send_event('backend/start_job', {"task": a_task})
-            update_status(1, a_task)
-            logger.info(f'founded task send it to in work: {a_task.get("name")} / {a_task.get("key")}')
+            update_status(TaskStatus.started.value, a_task)
+            send_event(Events.TASK_START, {"task": a_task})
+            logger.info(f'found a task, sent it to in work: {a_task.get("name")} / {a_task.get("id")}')
 
     try:
         logger.info('Starting')

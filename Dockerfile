@@ -1,17 +1,15 @@
-FROM python:3.9.2
+FROM spex.common:latest
 USER root
 
-ENV PYTHONDONTWRITEBYTECODE = 1
-ENV PYTHONUNBUFFERED = 1
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
 COPY ./microservices/ms-job-manager /app/services/app
 COPY ./common /app/common
 
 WORKDIR /app/services/app
 
-
-RUN pip install pipenv
-RUN pip install -e ../../common
-RUN pipenv install --system --skip-lock
+RUN pip install pandas==1.3.4
+RUN pipenv install --system --deploy --ignore-pipfile
 
 CMD ["python", "app.py"]
