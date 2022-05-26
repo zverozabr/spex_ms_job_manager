@@ -211,7 +211,7 @@ class Executor:
                         key: result[key]
                         for key in ("stderr", "stdout")
                     }
-                    add_history(a_task["_id"], hist_dict)
+                    add_history(f"jobs/{a_task['parent']}", hist_dict)
 
                     result = {
                         key: result[key]

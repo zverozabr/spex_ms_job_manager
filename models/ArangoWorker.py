@@ -11,11 +11,9 @@ from spex_common.models.Status import TaskStatus
 
 from models.Constants import collection, Events
 from utils import (
-    add_history as add_history_original,
     update_status as update_status_original
 )
 
-add_history = partial(add_history_original, 'job_manager_catcher')
 update_status = partial(update_status_original, collection, 'job_manager_catcher')
 
 

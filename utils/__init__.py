@@ -12,7 +12,7 @@ def add_history(login, parent, content):
             'login': login,
             'id': '0'
         },
-        'date': str(datetime.now()),
+        'date': datetime.now().isoformat(),
         'content': content,
         'parent': parent,
     }).to_json())
@@ -130,6 +130,6 @@ def update_status(collection, login, status, a_task, result=None, error=None):
     )
     add_history(
         login,
-        a_task["_id"],
+        f"jobs/{a_task['parent']}",
         f'status from: {a_task["status"]} to: {status}'
     )
