@@ -6,7 +6,7 @@ from spex_common.models.WaitTableEntry import wait_table_entry, WaitTableEntry
 from spex_common.models.Status import TaskStatus
 
 
-def add_history(login, parent, content):
+def add_history(login, parent, content, event_type: str = "job_manager_update"):
     db_instance().insert('history', history({
         'author': {
             'login': login,
@@ -15,6 +15,7 @@ def add_history(login, parent, content):
         'date': datetime.now().isoformat(),
         'content': content,
         'parent': parent,
+        'event_type': event_type
     }).to_json())
 
 
@@ -69,6 +70,7 @@ def del_from_waiting_table(ids):
         ids=ids
     )
 
+
 def get_task_with_status(_id: str, status: int):
     tasks = TaskService.select_tasks(
         search="FILTER doc._id == @value and doc.status == @status LIMIT 1",
@@ -122,7 +124,7 @@ def update_status(collection, login, status, a_task, result=None, error=None):
     if error:
         data.update({"error": error})
 
-    result = db_instance().update(
+    db_instance().update(
         collection,
         data,
         search,
@@ -131,5 +133,5 @@ def update_status(collection, login, status, a_task, result=None, error=None):
     add_history(
         login,
         f"jobs/{a_task['parent']}",
-        f'status from: {a_task["status"]} to: {status}'
+        f'status from: {a_task["status"]} to: {status}',
     )
